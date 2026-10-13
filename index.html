@@ -300,7 +300,6 @@ h3 {
   text-transform: uppercase;
 }
 
-/* Neighbor alert pill */
 .group-hotspot {
   margin: 0 0 12px;
   font-size: 11px;
@@ -470,12 +469,19 @@ function colorFor(name) {
 }
 
 function dayLabel(iso) {
-  return new Date(iso.slice(0, 10) + "T00:00:00Z").toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC"
-  });
+  if (!iso || iso.length < 10) return "Upcoming";
+  var datePart = iso.slice(0, 10);
+  var parts = datePart.split("-");
+  if (parts.length === 3) {
+    var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+    return d.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC"
+    });
+  }
+  return datePart;
 }
 
 function findSharedRows(seatMap) {
@@ -493,7 +499,13 @@ function findSharedRows(seatMap) {
 }
 
 function createTicketCard(s, isPast) {
-  var hh = +s.showtime.slice(11, 13);
+  var showtime = String(s.showtime || "");
+  var timePart = showtime.indexOf("T") !== -1 ? showtime.split("T")[1] : showtime;
+  var timeTokens = timePart.split(":");
+  var hh = parseInt(timeTokens[0], 10);
+  if (isNaN(hh)) hh = 19;
+  var mm = timeTokens[1] ? timeTokens[1].slice(0, 2) : "00";
+
   var el = document.createElement("article");
   el.className = "ticket" + (isPast ? " is-past" : "");
 
@@ -513,11 +525,11 @@ function createTicketCard(s, isPast) {
   markup += '</div><div class="stub"><span class="time"></span><span class="ampm"></span></div>';
 
   el.innerHTML = markup;
-  el.querySelector("h3").textContent = s.title;
+  el.querySelector("h3").textContent = s.title || "Untitled Screening";
   el.querySelector(".where").textContent = cleanTheaterName(s.theater);
 
   var whoBox = el.querySelector(".who");
-  s.going.forEach(function (n) {
+  (s.going || []).forEach(function (n) {
     var row = document.createElement("div");
     row.className = "attendee-row";
 
@@ -538,7 +550,7 @@ function createTicketCard(s, isPast) {
     personInfo.appendChild(nameLabel);
     row.appendChild(personInfo);
 
-    if (s.seatMap && s.seatMap[n]) {
+    if (s.seatMap && s.seatMap[n] && s.seatMap[n].toLowerCase() !== "seat") {
       var seatBadge = document.createElement("span");
       seatBadge.className = "seat-badge";
       seatBadge.textContent = s.seatMap[n];
@@ -569,7 +581,7 @@ function createTicketCard(s, isPast) {
     webLink.href = theaterUrl;
   }
 
-  el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + s.showtime.slice(14, 16);
+  el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + mm;
   el.querySelector(".ampm").textContent = hh >= 12 ? "PM" : "AM";
 
   return el;
@@ -596,7 +608,8 @@ function renderFeed(targetContainer, shows, isPast) {
       h.textContent = day;
       targetContainer.appendChild(h);
     }
-    targetContainer.appendChild(createTicketCard(s, isPast));
+    var card = createTicketCard(s, isPast);
+    if (card) targetContainer.appendChild(card);
   });
 }
 
