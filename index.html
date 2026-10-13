@@ -344,6 +344,11 @@ function render(shows) {
     feed.appendChild(p);
     return;
   }
+
+  var ua = navigator.userAgent || "";
+  var isIOS = /iphone|ipad|ipod/i.test(ua);
+  var isAndroid = /android/i.test(ua);
+
   var day = "";
   shows.forEach(function (s) {
     var label = dayLabel(s.showtime);
@@ -358,8 +363,8 @@ function render(shows) {
     el.className = "ticket";
     el.innerHTML = '<div class="main-content"><h3></h3><p class="where"></p>' +
       '<div class="who"></div>' +
-      '<a class="go" target="_blank" rel="external">I Want To Go</a>' +
-      '<a class="web" target="_blank" rel="external">Or book on drafthouse.com</a></div>' +
+      '<a class="go">I Want To Go</a>' +
+      '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a></div>' +
       '<div class="stub"><span class="time"></span><span class="ampm"></span></div>';
     
     el.querySelector("h3").textContent = s.title;
@@ -398,10 +403,18 @@ function render(shows) {
     });
     
     var theaterUrl = linkFor(s.theater);
-    
     var goLink = el.querySelector(".go");
-    goLink.href = theaterUrl;
     
+    if (isIOS) {
+      goLink.href = "alamo://";
+    } else if (isAndroid) {
+      goLink.href = "intent:#Intent;action=android.intent.action.VIEW;data=" + 
+        encodeURIComponent(theaterUrl) + ";package=nz.co.vista.android.movie.alamo;end";
+    } else {
+      goLink.href = theaterUrl;
+      goLink.target = "_blank";
+    }
+
     var webLink = el.querySelector(".web");
     webLink.href = theaterUrl;
     
