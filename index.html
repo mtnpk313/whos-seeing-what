@@ -31,6 +31,7 @@
   --gold: #F5B041;
   --text: #F5F5F7;
   --muted: #9E9EA8;
+  --dim: #6C6C77;
   --stub: 96px;
 }
 
@@ -43,21 +44,40 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+}
+
+/* Pull-to-refresh banner */
+#ptr-banner {
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: height 0.2s ease;
+}
+#ptr-banner.loading {
+  height: 48px;
 }
 
 main {
   max-width: 520px;
   margin: 0 auto;
-  padding-top: max(32px, calc(env(safe-area-inset-top) + 16px));
+  padding-top: max(24px, calc(env(safe-area-inset-top) + 12px));
   padding-left: max(18px, env(safe-area-inset-left));
   padding-right: max(18px, env(safe-area-inset-right));
   padding-bottom: max(48px, calc(env(safe-area-inset-bottom) + 24px));
 }
 
 header {
-  margin-bottom: 28px;
+  margin-bottom: 20px;
   border-bottom: 2px solid var(--border);
-  padding-bottom: 20px;
+  padding-bottom: 18px;
 }
 
 h1 {
@@ -73,10 +93,48 @@ h1 {
 h1 span.brand { color: var(--red); }
 
 .lede {
-  margin: 0;
+  margin: 0 0 14px;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.45;
+}
+
+/* Status Indicator */
+.status-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.status-bar:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #45454F;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2ECC71;
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+}
+.status-dot.syncing {
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(245, 176, 65, 0.6);
+  animation: pulse 1s infinite alternate;
+}
+@keyframes pulse {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
 }
 
 h2 {
@@ -129,6 +187,17 @@ h2::after {
 }
 .ticket::before { top: -10px; }
 .ticket::after { bottom: -10px; }
+
+/* Past Screening Card Style */
+.ticket.is-past {
+  opacity: 0.65;
+  background: #141417;
+  border-style: dashed;
+}
+.ticket.is-past:hover {
+  opacity: 0.9;
+  transform: none;
+}
 
 .main-content {
   flex: 1;
@@ -266,32 +335,90 @@ h3 {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-
 .web:hover { color: var(--text); }
-.empty, .note, .error { color: var(--muted); font-size: 14px; }
+
+/* Archive Toggle Button */
+.archive-toggle-wrap {
+  margin-top: 36px;
+  text-align: center;
+}
+
+.archive-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.03em;
+}
+.archive-toggle:hover {
+  border-color: #555562;
+  color: var(--text);
+  background: rgba(255,255,255,0.03);
+}
+
+#past-feed {
+  display: none;
+  margin-top: 24px;
+}
+#past-feed.open {
+  display: block;
+}
+
+.empty, .error { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; }
 .error { color: #FF6B6B; }
 .note {
-  margin-top: 36px;
+  margin-top: 32px;
   font-size: 12px;
   text-align: center;
-  color: #6C6C77;
+  color: var(--dim);
 }
 </style>
 </head>
 <body>
+
+<div id="ptr-banner">↓ Pull to refresh</div>
+
 <main>
   <header>
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
+    <div class="status-bar" id="statusBar" title="Tap to sync now">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Syncing showtimes…</span>
+    </div>
   </header>
+
   <div id="feed"><p class="empty">Checking showtimes…</p></div>
+
+  <!-- Past Screenings Archive -->
+  <div class="archive-toggle-wrap" id="archiveWrap" style="display:none;">
+    <button type="button" class="archive-toggle" id="archiveToggle">
+      Show Past Screenings (<span id="archiveCount">0</span>)
+    </button>
+  </div>
+  <div id="past-feed"></div>
+
   <p class="note">Automatically syncs a few minutes after someone forwards or returns an Alamo ticket.</p>
 </main>
+
 <script>
 var API_URL = "https://script.google.com/macros/s/AKfycbyLNQyTF0zPjFIW176T6oCvs2tOikWQ11VVXpzUquS4NDSpT2scqSB0EoKCkDJ-ekBi/exec?key=bd2a8a48bd064c4bb9ea3e013c8b2401";
 
 var COLORS = ["#E52329", "#F5B041", "#2A9D8F", "#457B9D", "#9B5DE5", "#00BBF9", "#E76F51"];
 var feed = document.getElementById("feed");
+var pastFeed = document.getElementById("past-feed");
+var statusText = document.getElementById("statusText");
+var statusDot = document.getElementById("statusDot");
+var statusBar = document.getElementById("statusBar");
+var archiveWrap = document.getElementById("archiveWrap");
+var archiveToggle = document.getElementById("archiveToggle");
+var archiveCount = document.getElementById("archiveCount");
+var ptrBanner = document.getElementById("ptr-banner");
 
 var HOME = "https://drafthouse.com";
 var THEATER_LINKS = {
@@ -301,6 +428,13 @@ var THEATER_LINKS = {
   "lakeline": "https://drafthouse.com/austin/theater/lakeline",
   "slaughter": "https://drafthouse.com/austin/theater/slaughter-lane"
 };
+
+var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
+var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
+var PLAY_STORE = "https://play.google.com/store/apps/details?id=" + ANDROID_PKG;
+
+var lastLoadedTime = null;
+var isPastExpanded = false;
 
 function linkFor(theater) {
   var t = (theater || "").toLowerCase();
@@ -317,10 +451,6 @@ function cleanTheaterName(rawName) {
     .replace(/alamo\s*[-–—:]?\s*/gi, '')
     .trim();
 }
-
-var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
-var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
-var PLAY_STORE = "https://play.google.com/store/apps/details?id=" + ANDROID_PKG;
 
 function colorFor(name) {
   var h = 0;
@@ -339,76 +469,63 @@ function dayLabel(iso) {
   });
 }
 
-function render(shows) {
-  feed.innerHTML = "";
-  if (!shows || !shows.length) {
-    var p = document.createElement("p");
-    p.className = "empty";
-    p.textContent = "No bookings yet. When someone forwards an Alamo confirmation, it appears here.";
-    feed.appendChild(p);
-    return;
+function createTicketCard(s, isPast) {
+  var hh = +s.showtime.slice(11, 13);
+  var el = document.createElement("article");
+  el.className = "ticket" + (isPast ? " is-past" : "");
+
+  var markup = '<div class="main-content"><h3></h3><p class="where"></p>' +
+    '<div class="who"></div>';
+  
+  if (!isPast) {
+    markup += '<a class="go" target="_blank" rel="noopener noreferrer">I Want To Go</a>' +
+      '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a>';
   }
+  markup += '</div><div class="stub"><span class="time"></span><span class="ampm"></span></div>';
 
-  var ua = navigator.userAgent || "";
-  var isIOS = /iphone|ipad|ipod/i.test(ua);
-  var isAndroid = /android/i.test(ua);
+  el.innerHTML = markup;
+  el.querySelector("h3").textContent = s.title;
+  el.querySelector(".where").textContent = cleanTheaterName(s.theater);
 
-  var day = "";
-  shows.forEach(function (s) {
-    var label = dayLabel(s.showtime);
-    if (label !== day) {
-      day = label;
-      var h = document.createElement("h2");
-      h.textContent = day;
-      feed.appendChild(h);
+  var whoBox = el.querySelector(".who");
+  s.going.forEach(function (n) {
+    var row = document.createElement("div");
+    row.className = "attendee-row";
+
+    var personInfo = document.createElement("div");
+    personInfo.className = "person-info";
+
+    var a = document.createElement("span");
+    a.className = "av";
+    a.style.background = colorFor(n);
+    a.setAttribute("aria-hidden", "true");
+    a.textContent = n.charAt(0).toUpperCase();
+
+    var nameLabel = document.createElement("span");
+    nameLabel.className = "names";
+    nameLabel.textContent = n;
+
+    personInfo.appendChild(a);
+    personInfo.appendChild(nameLabel);
+    row.appendChild(personInfo);
+
+    if (s.seatMap && s.seatMap[n]) {
+      var seatBadge = document.createElement("span");
+      seatBadge.className = "seat-badge";
+      seatBadge.textContent = s.seatMap[n];
+      row.appendChild(seatBadge);
     }
-    var hh = +s.showtime.slice(11, 13);
-    var el = document.createElement("article");
-    el.className = "ticket";
-    el.innerHTML = '<div class="main-content"><h3></h3><p class="where"></p>' +
-      '<div class="who"></div>' +
-      '<a class="go" target="_blank" rel="noopener noreferrer">I Want To Go</a>' +
-      '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a></div>' +
-      '<div class="stub"><span class="time"></span><span class="ampm"></span></div>';
-    
-    el.querySelector("h3").textContent = s.title;
-    el.querySelector(".where").textContent = cleanTheaterName(s.theater);
-    
-    var whoBox = el.querySelector(".who");
-    s.going.forEach(function (n) {
-      var row = document.createElement("div");
-      row.className = "attendee-row";
 
-      var personInfo = document.createElement("div");
-      personInfo.className = "person-info";
+    whoBox.appendChild(row);
+  });
 
-      var a = document.createElement("span");
-      a.className = "av";
-      a.style.background = colorFor(n);
-      a.setAttribute("aria-hidden", "true");
-      a.textContent = n.charAt(0).toUpperCase();
-
-      var nameLabel = document.createElement("span");
-      nameLabel.className = "names";
-      nameLabel.textContent = n;
-
-      personInfo.appendChild(a);
-      personInfo.appendChild(nameLabel);
-      row.appendChild(personInfo);
-
-      if (s.seatMap && s.seatMap[n]) {
-        var seatBadge = document.createElement("span");
-        seatBadge.className = "seat-badge";
-        seatBadge.textContent = s.seatMap[n];
-        row.appendChild(seatBadge);
-      }
-
-      whoBox.appendChild(row);
-    });
-    
+  if (!isPast) {
     var theaterUrl = linkFor(s.theater);
     var goLink = el.querySelector(".go");
-    
+    var ua = navigator.userAgent || "";
+    var isIOS = /iphone|ipad|ipod/i.test(ua);
+    var isAndroid = /android/i.test(ua);
+
     if (isIOS) {
       goLink.href = IOS_APP_STORE;
     } else if (isAndroid) {
@@ -421,31 +538,156 @@ function render(shows) {
 
     var webLink = el.querySelector(".web");
     webLink.href = theaterUrl;
-    
-    el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + s.showtime.slice(14, 16);
-    el.querySelector(".ampm").textContent = hh >= 12 ? "PM" : "AM";
-    
-    feed.appendChild(el);
+  }
+
+  el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + s.showtime.slice(14, 16);
+  el.querySelector(".ampm").textContent = hh >= 12 ? "PM" : "AM";
+
+  return el;
+}
+
+function renderFeed(targetContainer, shows, isPast) {
+  targetContainer.innerHTML = "";
+  if (!shows || !shows.length) {
+    if (!isPast) {
+      var p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "No upcoming bookings. When someone forwards an Alamo confirmation, it appears here.";
+      targetContainer.appendChild(p);
+    }
+    return;
+  }
+
+  var day = "";
+  shows.forEach(function (s) {
+    var label = dayLabel(s.showtime);
+    if (label !== day) {
+      day = label;
+      var h = document.createElement("h2");
+      h.textContent = day;
+      targetContainer.appendChild(h);
+    }
+    targetContainer.appendChild(createTicketCard(s, isPast));
   });
 }
 
-function showError() {
-  feed.innerHTML = '<p class="error">Couldn\'t load schedule. Please check your network and refresh.</p>';
+function updateStatusText() {
+  if (!lastLoadedTime) return;
+  var secAgo = Math.floor((Date.now() - lastLoadedTime) / 1000);
+  if (secAgo < 45) {
+    statusText.textContent = "Live · Updated just now";
+  } else {
+    var minAgo = Math.floor(secAgo / 60);
+    statusText.textContent = "Live · Updated " + (minAgo <= 1 ? "1m" : minAgo + "m") + " ago";
+  }
+}
+
+function setSyncingState(isSyncing) {
+  if (isSyncing) {
+    statusDot.className = "status-dot syncing";
+    statusText.textContent = "Syncing schedule…";
+  } else {
+    statusDot.className = "status-dot";
+    lastLoadedTime = Date.now();
+    updateStatusText();
+  }
 }
 
 function load() {
+  setSyncingState(true);
+
   fetch(API_URL)
     .then(function(res) { return res.json(); })
     .then(function(data) {
-      if (data && data.error) showError();
-      else render(data);
+      if (data && data.error) {
+        statusDot.className = "status-dot";
+        statusText.textContent = "Error syncing";
+        return;
+      }
+
+      // Backwards-compatible if backend still returns flat array
+      var upcoming = Array.isArray(data) ? data : (data.upcoming || []);
+      var past = Array.isArray(data) ? [] : (data.past || []);
+
+      renderFeed(feed, upcoming, false);
+
+      if (past && past.length > 0) {
+        archiveWrap.style.display = "block";
+        archiveCount.textContent = past.length;
+        renderFeed(pastFeed, past, true);
+      } else {
+        archiveWrap.style.display = "none";
+      }
+
+      setSyncingState(false);
     })
-    .catch(showError);
+    .catch(function() {
+      statusDot.className = "status-dot";
+      statusText.textContent = "Offline · Tap to retry";
+    });
 }
 
+// Tap status indicator to manually refresh
+statusBar.addEventListener("click", function() {
+  load();
+});
+
+// Past screenings toggle button
+archiveToggle.addEventListener("click", function() {
+  isPastExpanded = !isPastExpanded;
+  if (isPastExpanded) {
+    pastFeed.classList.add("open");
+    archiveToggle.textContent = "Hide Past Screenings";
+  } else {
+    pastFeed.classList.remove("open");
+    archiveToggle.innerHTML = 'Show Past Screenings (<span id="archiveCount">' + archiveCount.textContent + '</span>)';
+  }
+});
+
+// Native Touch Pull-to-Refresh
+var touchStartY = 0;
+var touchDeltaY = 0;
+
+window.addEventListener("touchstart", function(e) {
+  if (window.scrollY === 0) {
+    touchStartY = e.touches[0].clientY;
+  } else {
+    touchStartY = 0;
+  }
+}, { passive: true });
+
+window.addEventListener("touchmove", function(e) {
+  if (touchStartY > 0 && window.scrollY === 0) {
+    touchDeltaY = e.touches[0].clientY - touchStartY;
+    if (touchDeltaY > 15 && touchDeltaY < 80) {
+      ptrBanner.style.height = touchDeltaY + "px";
+      ptrBanner.textContent = touchDeltaY > 55 ? "Release to refresh" : "↓ Pull to refresh";
+    }
+  }
+}, { passive: true });
+
+window.addEventListener("touchend", function() {
+  if (touchDeltaY > 55 && window.scrollY === 0) {
+    ptrBanner.style.height = "42px";
+    ptrBanner.textContent = "Syncing…";
+    load();
+    setTimeout(function() {
+      ptrBanner.style.height = "0";
+      touchDeltaY = 0;
+    }, 600);
+  } else {
+    ptrBanner.style.height = "0";
+    touchDeltaY = 0;
+  }
+}, { passive: true });
+
+// Auto updates
 load();
 setInterval(load, 120000);
-document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
+setInterval(updateStatusText, 30000);
+document.addEventListener("visibilitychange", function () {
+  if (!document.hidden) load();
+});
 </script>
 </body>
 </html>
