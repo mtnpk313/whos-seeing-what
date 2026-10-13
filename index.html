@@ -48,7 +48,6 @@ body {
 main {
   max-width: 520px;
   margin: 0 auto;
-  /* Safe-area padding prevents notch/dynamic island overlap on iOS standalone mode */
   padding-top: max(32px, calc(env(safe-area-inset-top) + 16px));
   padding-left: max(18px, env(safe-area-inset-left));
   padding-right: max(18px, env(safe-area-inset-right));
@@ -319,36 +318,23 @@ function cleanTheaterName(rawName) {
     .trim();
 }
 
-var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
 var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
 var PLAY = "https://play.google.com/store/apps/details?id=" + ANDROID_PKG;
 
-function openAlamoApp(fallbackUrl) {
+function openAlamoApp(theaterUrl) {
   var ua = navigator.userAgent || "";
   var isAndroid = /android/i.test(ua);
-  var isIOS = /iphone|ipad|ipod/i.test(ua);
+  var targetUrl = theaterUrl || HOME;
 
   if (isAndroid) {
-    window.location.href = "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=" + ANDROID_PKG + ";S.browser_fallback_url=" + encodeURIComponent(fallbackUrl || PLAY) + ";end";
+    window.location.href = "intent:#Intent;action=android.intent.action.VIEW;data=" + 
+      encodeURIComponent(targetUrl) + ";package=" + ANDROID_PKG + 
+      ";S.browser_fallback_url=" + encodeURIComponent(targetUrl) + ";end";
     return;
   }
 
-  if (isIOS) {
-    var start = Date.now();
-    // Primary custom URI scheme registered by Alamo Drafthouse iOS app
-    window.location.href = "drafthouse://";
-
-    // If app isn't installed, user remains on the page; fallback triggers after timeout
-    setTimeout(function() {
-      if (Date.now() - start < 1500) {
-        window.location.href = fallbackUrl || IOS_APP_STORE;
-      }
-    }, 800);
-    return;
-  }
-
-  // Desktop
-  window.open(fallbackUrl || HOME, "_blank", "noopener,noreferrer");
+  // iOS & Desktop: Universal Link navigation
+  window.location.assign(targetUrl);
 }
 
 function colorFor(name) {
