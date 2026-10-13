@@ -318,25 +318,6 @@ function cleanTheaterName(rawName) {
     .trim();
 }
 
-var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
-var PLAY = "https://play.google.com/store/apps/details?id=" + ANDROID_PKG;
-
-function openAlamoApp(theaterUrl) {
-  var ua = navigator.userAgent || "";
-  var isAndroid = /android/i.test(ua);
-  var targetUrl = theaterUrl || HOME;
-
-  if (isAndroid) {
-    window.location.href = "intent:#Intent;action=android.intent.action.VIEW;data=" + 
-      encodeURIComponent(targetUrl) + ";package=" + ANDROID_PKG + 
-      ";S.browser_fallback_url=" + encodeURIComponent(targetUrl) + ";end";
-    return;
-  }
-
-  // iOS & Desktop: Universal Link navigation
-  window.location.assign(targetUrl);
-}
-
 function colorFor(name) {
   var h = 0;
   for (var i = 0; i < name.length; i++) {
@@ -377,8 +358,8 @@ function render(shows) {
     el.className = "ticket";
     el.innerHTML = '<div class="main-content"><h3></h3><p class="where"></p>' +
       '<div class="who"></div>' +
-      '<a class="go" target="_blank" rel="external">I Want To Go</a>'
-      '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a></div>' +
+      '<a class="go" target="_blank" rel="external">I Want To Go</a>' +
+      '<a class="web" target="_blank" rel="external">Or book on drafthouse.com</a></div>' +
       '<div class="stub"><span class="time"></span><span class="ampm"></span></div>';
     
     el.querySelector("h3").textContent = s.title;
@@ -416,12 +397,13 @@ function render(shows) {
       whoBox.appendChild(row);
     });
     
-   var theaterUrl = linkFor(s.theater);
-   var goLink = el.querySelector(".go");
-goLink.href = theaterUrl;
-
-  var webLink = el.querySelector(".web");
-webLink.href = theaterUrl;
+    var theaterUrl = linkFor(s.theater);
+    
+    var goLink = el.querySelector(".go");
+    goLink.href = theaterUrl;
+    
+    var webLink = el.querySelector(".web");
+    webLink.href = theaterUrl;
     
     el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + s.showtime.slice(14, 16);
     el.querySelector(".ampm").textContent = hh >= 12 ? "PM" : "AM";
