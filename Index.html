@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alamo Crew</title>
+
+<!-- iOS & Android PWA Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Alamo Crew">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F0F11">
+
+<!-- Real iOS Home Screen & Favicon Icons -->
+<link rel="apple-touch-icon" sizes="180x180" href="https://img.icons8.com/fluency/180/movie-ticket.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://img.icons8.com/fluency/192/movie-ticket.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://img.icons8.com/fluency/32/movie-ticket.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0F0F11;
+  --surface: #19191D;
+  --surface-stub: #151518;
+  --border: #2D2D34;
+  --red: #E52329;
+  --red-hover: #C41B20;
+  --gold: #F5B041;
+  --text: #F5F5F7;
+  --muted: #9E9EA8;
+  --stub: 96px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 32px 18px 48px;
+}
+
+header {
+  margin-bottom: 28px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 20px;
+}
+
+h1 {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: clamp(38px, 11vw, 52px);
+  letter-spacing: 0.05em;
+  line-height: 0.95;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+h1 span.brand { color: var(--red); }
+
+.lede {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+h2 {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  margin: 30px 0 14px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+h2::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Ticket Card */
+.ticket {
+  position: relative;
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 0 0 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.ticket:hover {
+  border-color: #45454F;
+  transform: translateY(-2px);
+}
+
+.ticket::before, .ticket::after {
+  content: "";
+  position: absolute;
+  right: calc(var(--stub) - 9px);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  z-index: 2;
+}
+.ticket::before { top: -10px; }
+.ticket::after { bottom: -10px; }
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 18px 16px 18px 18px;
+}
+
+.stub {
+  width: var(--stub);
+  flex: none;
+  background: var(--surface-stub);
+  border-left: 2px dashed #3A3A44;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 6px;
+  text-align: center;
+}
+
+.time {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 34px;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+  color: var(--text);
+}
+
+.ampm {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+h3 {
+  margin: 0 0 4px;
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #FFFFFF;
+}
+
+.where {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.attendee-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.person-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.av {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.names {
+  font-size: 13px;
+  font-weight: 600;
+  color: #E2E2E8;
+}
+
+.seat-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(245, 176, 65, 0.12);
+  border: 1px solid rgba(245, 176, 65, 0.4);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  background: var(--red);
+  color: #FFFFFF;
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+  box-shadow: 0 4px 12px rgba(229, 35, 41, 0.25);
+}
+
+.go:hover { background: var(--red-hover); }
+
+.web {
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.web:hover { color: var(--text); }
+.empty, .note, .error { color: var(--muted); font-size: 14px; }
+.error { color: #FF6B6B; }
+.note {
+  margin-top: 36px;
+  font-size: 12px;
+  text-align: center;
+  color: #6C6C77;
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Who's seeing <span class="brand">what</span></h1>
+    <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
+  </header>
+  <div id="feed"><p class="empty">Checking showtimes…</p></div>
+  <p class="note">Automatically syncs a few minutes after someone forwards or returns an Alamo ticket.</p>
+</main>
+<script>
+var API_URL = "https://script.google.com/macros/s/AKfycbyLNQyTF0zPjFIW176T6oCvs2tOikWQ11VVXpzUquS4NDSpT2scqSB0EoKCkDJ-ekBi/exec?key=bd2a8a48bd064c4bb9ea3e013c8b2401";
+
+var COLORS = ["#E52329", "#F5B041", "#2A9D8F", "#457B9D", "#9B5DE5", "#00BBF9", "#E76F51"];
+var feed = document.getElementById("feed");
+
+var HOME = "https://drafthouse.com";
+var THEATER_LINKS = {
+  "south lamar": "https://drafthouse.com/austin/theater/south-lamar",
+  "mueller": "https://drafthouse.com/austin/theater/mueller",
+  "village": "https://drafthouse.com/austin/theater/village",
+  "lakeline": "https://drafthouse.com/austin/theater/lakeline",
+  "slaughter": "https://drafthouse.com/austin/theater/slaughter-lane"
+};
+
+function linkFor(theater) {
+  var t = (theater || "").toLowerCase();
+  for (var key in THEATER_LINKS) {
+    if (t.indexOf(key) !== -1) return THEATER_LINKS[key];
+  }
+  return HOME;
+}
+
+function cleanTheaterName(rawName) {
+  if (!rawName) return "Alamo Drafthouse";
+  return rawName
+    .replace(/alamo\s*drafthouse\s*[-–—:]?\s*/gi, '')
+    .replace(/alamo\s*[-–—:]?\s*/gi, '')
+    .trim();
+}
+
+var IOS_APP = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
+var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
+var PLAY = "https://play.google.com/store/apps/details?id=" + ANDROID_PKG;
+
+function appTarget(theaterUrl) {
+  var ua = navigator.userAgent || "";
+  if (/android/i.test(ua)) {
+    return {
+      mobile: true,
+      target: "_top",
+      href: "intent:#Intent;action=android.intent.action.MAIN;" +
+        "category=android.intent.category.LAUNCHER;package=" + ANDROID_PKG +
+        ";S.browser_fallback_url=" + encodeURIComponent(PLAY) + ";end"
+    };
+  }
+  if (/iphone|ipad|ipod/i.test(ua)) {
+    return { mobile: true, target: "_blank", href: IOS_APP };
+  }
+  return { mobile: false, target: "_blank", href: theaterUrl };
+}
+
+function colorFor(name) {
+  var h = 0;
+  for (var i = 0; i < name.length; i++) {
+    h = ((h << 5) - h + name.charCodeAt(i)) >>> 0;
+  }
+  return COLORS[h % COLORS.length];
+}
+
+function dayLabel(iso) {
+  return new Date(iso.slice(0, 10) + "T00:00:00Z").toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC"
+  });
+}
+
+function render(shows) {
+  feed.innerHTML = "";
+  if (!shows || !shows.length) {
+    var p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "No bookings yet. When someone forwards an Alamo confirmation, it appears here.";
+    feed.appendChild(p);
+    return;
+  }
+  var day = "";
+  shows.forEach(function (s) {
+    var label = dayLabel(s.showtime);
+    if (label !== day) {
+      day = label;
+      var h = document.createElement("h2");
+      h.textContent = day;
+      feed.appendChild(h);
+    }
+    var hh = +s.showtime.slice(11, 13);
+    var el = document.createElement("article");
+    el.className = "ticket";
+    el.innerHTML = '<div class="main-content"><h3></h3><p class="where"></p>' +
+      '<div class="who"></div>' +
+      '<a class="go" rel="noopener noreferrer">I Want To Go</a>' +
+      '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a></div>' +
+      '<div class="stub"><span class="time"></span><span class="ampm"></span></div>';
+    
+    el.querySelector("h3").textContent = s.title;
+    el.querySelector(".where").textContent = cleanTheaterName(s.theater);
+    
+    var whoBox = el.querySelector(".who");
+    s.going.forEach(function (n) {
+      var row = document.createElement("div");
+      row.className = "attendee-row";
+
+      var personInfo = document.createElement("div");
+      personInfo.className = "person-info";
+
+      var a = document.createElement("span");
+      a.className = "av";
+      a.style.background = colorFor(n);
+      a.setAttribute("aria-hidden", "true");
+      a.textContent = n.charAt(0).toUpperCase();
+
+      var nameLabel = document.createElement("span");
+      nameLabel.className = "names";
+      nameLabel.textContent = n;
+
+      personInfo.appendChild(a);
+      personInfo.appendChild(nameLabel);
+      row.appendChild(personInfo);
+
+      if (s.seatMap && s.seatMap[n]) {
+        var seatBadge = document.createElement("span");
+        seatBadge.className = "seat-badge";
+        seatBadge.textContent = s.seatMap[n];
+        row.appendChild(seatBadge);
+      }
+
+      whoBox.appendChild(row);
+    });
+    
+    var web = linkFor(s.theater);
+    var app = appTarget(web);
+    var go = el.querySelector(".go");
+    go.href = app.href;
+    go.target = app.target;
+    
+    var webLink = el.querySelector(".web");
+    webLink.href = web;
+    if (!app.mobile) webLink.style.display = "none";
+    
+    el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + s.showtime.slice(14, 16);
+    el.querySelector(".ampm").textContent = hh >= 12 ? "PM" : "AM";
+    
+    feed.appendChild(el);
+  });
+}
+
+function showError() {
+  feed.innerHTML = '<p class="error">Couldn\'t load schedule. Please check your network and refresh.</p>';
+}
+
+function load() {
+  fetch(API_URL)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data && data.error) showError();
+      else render(data);
+    })
+    .catch(showError);
+}
+
+load();
+setInterval(load, 120000);
+document.addEventListener("visibilitychange", function () { if (!document.hidden) load(); });
+</script>
+</body>
+</html>
