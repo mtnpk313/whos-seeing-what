@@ -318,6 +318,10 @@ function cleanTheaterName(rawName) {
     .trim();
 }
 
+var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
+var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
+var PLAY_STORE = "https://play.google.com/store/apps/details?id=" + ANDROID_PKG;
+
 function colorFor(name) {
   var h = 0;
   for (var i = 0; i < name.length; i++) {
@@ -363,7 +367,7 @@ function render(shows) {
     el.className = "ticket";
     el.innerHTML = '<div class="main-content"><h3></h3><p class="where"></p>' +
       '<div class="who"></div>' +
-      '<a class="go">I Want To Go</a>' +
+      '<a class="go" target="_blank" rel="noopener noreferrer">I Want To Go</a>' +
       '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a></div>' +
       '<div class="stub"><span class="time"></span><span class="ampm"></span></div>';
     
@@ -406,13 +410,13 @@ function render(shows) {
     var goLink = el.querySelector(".go");
     
     if (isIOS) {
-      goLink.href = "alamo://";
+      goLink.href = IOS_APP_STORE;
     } else if (isAndroid) {
       goLink.href = "intent:#Intent;action=android.intent.action.VIEW;data=" + 
-        encodeURIComponent(theaterUrl) + ";package=nz.co.vista.android.movie.alamo;end";
+        encodeURIComponent(theaterUrl) + ";package=" + ANDROID_PKG + 
+        ";S.browser_fallback_url=" + encodeURIComponent(PLAY_STORE) + ";end";
     } else {
       goLink.href = theaterUrl;
-      goLink.target = "_blank";
     }
 
     var webLink = el.querySelector(".web");
