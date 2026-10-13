@@ -395,9 +395,9 @@ h3 {
   <header>
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
-    <div class="status-bar" id="statusBar" title="Tap to sync now">
+    <div class="status-bar" id="statusBar" title="Tap to check for new tickets">
       <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">Syncing showtimes…</span>
+      <span id="statusText">Checking schedule…</span>
     </div>
   </header>
 
@@ -441,7 +441,7 @@ var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444"
 var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
 var PLAY_STORE = "https://play.google.com/store/apps/details?id=" + ANDROID_PKG;
 
-var lastLoadedTime = null;
+var lastSyncIso = null;
 var isPastExpanded = false;
 
 function linkFor(theater) {
@@ -468,20 +468,35 @@ function colorFor(name) {
   return COLORS[h % COLORS.length];
 }
 
-function dayLabel(iso) {
-  if (!iso || iso.length < 10) return "Upcoming";
-  var datePart = iso.slice(0, 10);
-  var parts = datePart.split("-");
-  if (parts.length === 3) {
-    var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
-    return d.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-      timeZone: "UTC"
-    });
+function parseTs(val) {
+  if (!val) return 0;
+  var str = String(val).trim().replace(/^'/, '');
+  var d = new Date(str);
+  if (!isNaN(d.getTime())) return d.getTime();
+
+  var m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
+  if (m) {
+    return new Date(+m[3], +m[1] - 1, +m[2], +m[4], +m[5]).getTime();
   }
-  return datePart;
+  return 0;
+}
+
+function dayLabel(iso) {
+  if (!iso) return "Upcoming";
+  var clean = String(iso).replace(/^'/, '');
+  if (clean.length >= 10 && clean.indexOf('-') !== -1) {
+    var parts = clean.slice(0, 10).split("-");
+    if (parts.length === 3) {
+      var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+      return d.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC"
+      });
+    }
+  }
+  return clean.slice(0, 10);
 }
 
 function findSharedRows(seatMap) {
@@ -499,7 +514,7 @@ function findSharedRows(seatMap) {
 }
 
 function createTicketCard(s, isPast) {
-  var showtime = String(s.showtime || "");
+  var showtime = String(s.showtime || "").replace(/^'/, '');
   var timePart = showtime.indexOf("T") !== -1 ? showtime.split("T")[1] : showtime;
   var timeTokens = timePart.split(":");
   var hh = parseInt(timeTokens[0], 10);
@@ -614,23 +629,33 @@ function renderFeed(targetContainer, shows, isPast) {
 }
 
 function updateStatusText() {
-  if (!lastLoadedTime) return;
-  var secAgo = Math.floor((Date.now() - lastLoadedTime) / 1000);
-  if (secAgo < 45) {
-    statusText.textContent = "Live · Updated just now";
+  if (!lastSyncIso) {
+    statusText.textContent = "Live · Connected";
+    return;
+  }
+
+  var syncDate = new Date(lastSyncIso);
+  var diffSec = Math.floor((Date.now() - syncDate.getTime()) / 1000);
+
+  if (diffSec < 60) {
+    statusText.textContent = "Live · Synced just now";
   } else {
-    var minAgo = Math.floor(secAgo / 60);
-    statusText.textContent = "Live · Updated " + (minAgo <= 1 ? "1m" : minAgo + "m") + " ago";
+    var minAgo = Math.floor(diffSec / 60);
+    if (minAgo < 60) {
+      statusText.textContent = "Live · Synced " + minAgo + "m ago";
+    } else {
+      var hrAgo = Math.floor(minAgo / 60);
+      statusText.textContent = "Live · Synced " + hrAgo + "h ago";
+    }
   }
 }
 
 function setSyncingState(isSyncing) {
   if (isSyncing) {
     statusDot.className = "status-dot syncing";
-    statusText.textContent = "Syncing schedule…";
+    statusText.textContent = "Checking for updates…";
   } else {
     statusDot.className = "status-dot";
-    lastLoadedTime = Date.now();
     updateStatusText();
   }
 }
@@ -649,6 +674,11 @@ function load() {
 
       var upcoming = Array.isArray(data) ? data : (data.upcoming || []);
       var past = Array.isArray(data) ? [] : (data.past || []);
+      lastSyncIso = data.lastSynced || null;
+
+      // Robust client sort fallback
+      upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
+      past.sort(function(a, b) { return parseTs(b.showtime) - parseTs(a.showtime); });
 
       renderFeed(feed, upcoming, false);
 
@@ -683,6 +713,7 @@ archiveToggle.addEventListener("click", function() {
   }
 });
 
+// Mobile Pull-to-refresh
 var touchStartY = 0;
 var touchDeltaY = 0;
 
@@ -719,9 +750,10 @@ window.addEventListener("touchend", function() {
   }
 }, { passive: true });
 
+// Initial load & background intervals
 load();
-setInterval(load, 120000);
-setInterval(updateStatusText, 30000);
+setInterval(load, 120000); // Check API every 2 minutes
+setInterval(updateStatusText, 30000); // Recalculate "X min ago" text every 30s
 document.addEventListener("visibilitychange", function () {
   if (!document.hidden) load();
 });
