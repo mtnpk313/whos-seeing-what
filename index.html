@@ -29,6 +29,7 @@
   --red: #E52329;
   --red-hover: #C41B20;
   --gold: #F5B041;
+  --green: #2ECC71;
   --text: #F5F5F7;
   --muted: #9E9EA8;
   --dim: #6C6C77;
@@ -47,7 +48,6 @@ body {
   overscroll-behavior-y: contain;
 }
 
-/* Pull-to-refresh banner */
 #ptr-banner {
   height: 0;
   overflow: hidden;
@@ -60,9 +60,6 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   transition: height 0.2s ease;
-}
-#ptr-banner.loading {
-  height: 48px;
 }
 
 main {
@@ -99,7 +96,6 @@ h1 span.brand { color: var(--red); }
   line-height: 1.45;
 }
 
-/* Status Indicator */
 .status-bar {
   display: inline-flex;
   align-items: center;
@@ -124,7 +120,7 @@ h1 span.brand { color: var(--red); }
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #2ECC71;
+  background: var(--green);
   box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
 }
 .status-dot.syncing {
@@ -188,7 +184,6 @@ h2::after {
 .ticket::before { top: -10px; }
 .ticket::after { bottom: -10px; }
 
-/* Past Screening Card Style */
 .ticket.is-past {
   opacity: 0.65;
   background: #141417;
@@ -305,6 +300,21 @@ h3 {
   text-transform: uppercase;
 }
 
+/* Neighbor alert pill */
+.group-hotspot {
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .go {
   display: flex;
   align-items: center;
@@ -337,7 +347,6 @@ h3 {
 }
 .web:hover { color: var(--text); }
 
-/* Archive Toggle Button */
 .archive-toggle-wrap {
   margin-top: 36px;
   text-align: center;
@@ -469,13 +478,33 @@ function dayLabel(iso) {
   });
 }
 
+function findSharedRows(seatMap) {
+  if (!seatMap) return [];
+  var rowCounts = {};
+  Object.keys(seatMap).forEach(function(person) {
+    var str = seatMap[person] || "";
+    var m = str.match(/Row\s*(\w+)/i);
+    if (m) {
+      var r = m[1].toUpperCase();
+      rowCounts[r] = (rowCounts[r] || 0) + 1;
+    }
+  });
+  return Object.keys(rowCounts).filter(function(r) { return rowCounts[r] > 1; });
+}
+
 function createTicketCard(s, isPast) {
   var hh = +s.showtime.slice(11, 13);
   var el = document.createElement("article");
   el.className = "ticket" + (isPast ? " is-past" : "");
 
-  var markup = '<div class="main-content"><h3></h3><p class="where"></p>' +
-    '<div class="who"></div>';
+  var markup = '<div class="main-content"><h3></h3><p class="where"></p>';
+
+  var shared = findSharedRows(s.seatMap);
+  if (shared.length > 0 && !isPast) {
+    markup += '<div class="group-hotspot">★ Sitting together in Row ' + shared.join(', ') + '</div>';
+  }
+
+  markup += '<div class="who"></div>';
   
   if (!isPast) {
     markup += '<a class="go" target="_blank" rel="noopener noreferrer">I Want To Go</a>' +
@@ -605,7 +634,6 @@ function load() {
         return;
       }
 
-      // Backwards-compatible if backend still returns flat array
       var upcoming = Array.isArray(data) ? data : (data.upcoming || []);
       var past = Array.isArray(data) ? [] : (data.past || []);
 
@@ -627,12 +655,10 @@ function load() {
     });
 }
 
-// Tap status indicator to manually refresh
 statusBar.addEventListener("click", function() {
   load();
 });
 
-// Past screenings toggle button
 archiveToggle.addEventListener("click", function() {
   isPastExpanded = !isPastExpanded;
   if (isPastExpanded) {
@@ -644,7 +670,6 @@ archiveToggle.addEventListener("click", function() {
   }
 });
 
-// Native Touch Pull-to-Refresh
 var touchStartY = 0;
 var touchDeltaY = 0;
 
@@ -681,7 +706,6 @@ window.addEventListener("touchend", function() {
   }
 }, { passive: true });
 
-// Auto updates
 load();
 setInterval(load, 120000);
 setInterval(updateStatusText, 30000);
