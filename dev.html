@@ -567,7 +567,7 @@ h3 {
 </main>
 
 <script>
-var API_URL = var API_URL = "https://script.google.com/macros/s/AKfycbxnk8cCBlXy9YBeSZHrJkIhSqFPXAiesxNYOhQ18oM2rn1blqyzH82-GKaQJexBr9ub/exec?key=bd2a8a48bd064c4bb9ea3e013c8b2401";
+var API_URL = "https://script.google.com/macros/s/AKfycbxnk8cCBlXy9YBeSZHrJkIhSqFPXAiesxNYOhQ18oM2rn1blqyzH82-GKaQJexBr9ub/exec?key=bd2a8a48bd064c4bb9ea3e013c8b2401";
 
 var COLORS = ["#E52329", "#F5B041", "#2A9D8F", "#457B9D", "#9B5DE5", "#00BBF9", "#E76F51"];
 var feed = document.getElementById("feed");
@@ -694,25 +694,43 @@ function openProfile(personName) {
     }
   });
 
-  document.getElementById("profAv").style.background = colorFor(personName);
-  document.getElementById("profAv").textContent = personName.charAt(0).toUpperCase();
-  document.getElementById("profName").textContent = personName;
-  document.getElementById("profMovieCount").textContent = recentMovies;
-  document.getElementById("profTopTheater").textContent = topTheater;
-  document.getElementById("profTopTheaterCount").textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
+  var profAv = document.getElementById("profAv");
+  var profName = document.getElementById("profName");
+  var profMovieCount = document.getElementById("profMovieCount");
+  var profTopTheater = document.getElementById("profTopTheater");
+  var profTopTheaterCount = document.getElementById("profTopTheaterCount");
 
-  document.getElementById("profileModal").classList.add("open");
+  if (profAv) {
+    profAv.style.background = colorFor(personName);
+    profAv.textContent = personName.charAt(0).toUpperCase();
+  }
+  if (profName) profName.textContent = personName;
+  if (profMovieCount) profMovieCount.textContent = recentMovies;
+  if (profTopTheater) profTopTheater.textContent = topTheater;
+  if (profTopTheaterCount) {
+    profTopTheaterCount.textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
+  }
+
+  var modal = document.getElementById("profileModal");
+  if (modal) modal.classList.add("open");
 }
 
-document.getElementById("profClose").addEventListener("click", function() {
-  document.getElementById("profileModal").classList.remove("open");
-});
+var profCloseBtn = document.getElementById("profClose");
+if (profCloseBtn) {
+  profCloseBtn.addEventListener("click", function() {
+    var modal = document.getElementById("profileModal");
+    if (modal) modal.classList.remove("open");
+  });
+}
 
-document.getElementById("profileModal").addEventListener("click", function(e) {
-  if (e.target === this) {
-    this.classList.remove("open");
-  }
-});
+var profileModalElem = document.getElementById("profileModal");
+if (profileModalElem) {
+  profileModalElem.addEventListener("click", function(e) {
+    if (e.target === this) {
+      this.classList.remove("open");
+    }
+  });
+}
 
 function createTicketCard(s, isPast) {
   var showtime = String(s.showtime || "").replace(/^'/, '');
@@ -878,7 +896,6 @@ function load() {
       var past = Array.isArray(data) ? [] : (data.past || []);
       lastSyncIso = data.lastSynced || null;
 
-      // Keep a flat record of all events to calculate user profiles
       allRawEvents = upcoming.concat(past);
 
       upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
@@ -896,7 +913,8 @@ function load() {
 
       setSyncingState(false);
     })
-    .catch(function() {
+    .catch(function(err) {
+      console.error("Fetch error:", err);
       statusDot.className = "status-dot";
       statusText.textContent = "Offline · Tap to retry";
     });
