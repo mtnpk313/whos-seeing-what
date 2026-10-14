@@ -412,7 +412,7 @@ h3 {
   </div>
   <div id="past-feed"></div>
 
-  <p class="note">Automatically refreshes every 5 minutes.</p>
+  <p class="note">Automatically syncs a few minutes after someone forwards or returns an Alamo ticket.</p>
 </main>
 
 <script>
@@ -440,7 +440,6 @@ var THEATER_LINKS = {
 
 var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
 var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
-var PLAY_STORE = "https://play.google.com/store/apps/details?id=" + ANDROID_PKG;
 
 var lastSyncIso = null;
 var isPastExpanded = false;
@@ -535,7 +534,7 @@ function createTicketCard(s, isPast) {
   markup += '<div class="who"></div>';
   
   if (!isPast) {
-    markup += '<a class="go" target="_blank" rel="noopener noreferrer">I Want To Go</a>' +
+    markup += '<a class="go">I Want To Go</a>' +
       '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a>';
   }
   markup += '</div><div class="stub"><span class="time"></span><span class="ampm"></span></div>';
@@ -583,13 +582,23 @@ function createTicketCard(s, isPast) {
     var isIOS = /iphone|ipad|ipod/i.test(ua);
     var isAndroid = /android/i.test(ua);
 
-    if (isIOS) {
-      goLink.href = IOS_APP_STORE;
-    } else if (isAndroid) {
-      goLink.href = "intent:#Intent;action=android.intent.action.VIEW;data=" + 
-        encodeURIComponent(theaterUrl) + ";package=" + ANDROID_PKG + 
-        ";S.browser_fallback_url=" + encodeURIComponent(PLAY_STORE) + ";end";
+    if (isAndroid) {
+      // Remove target and rel so Android Chrome doesn't treat the intent URL as a blocked popup
+      goLink.removeAttribute("target");
+      goLink.removeAttribute("rel");
+
+      // Strip protocol to form a valid Chrome Intent URI
+      var hostAndPath = theaterUrl.replace(/^https?:\/\//i, '');
+      goLink.href = "intent://" + hostAndPath + 
+        "#Intent;scheme=https;package=" + ANDROID_PKG + 
+        ";S.browser_fallback_url=" + encodeURIComponent(theaterUrl) + ";end";
+    } else if (isIOS) {
+      goLink.setAttribute("target", "_blank");
+      goLink.setAttribute("rel", "noopener noreferrer");
+      goLink.href = theaterUrl;
     } else {
+      goLink.setAttribute("target", "_blank");
+      goLink.setAttribute("rel", "noopener noreferrer");
       goLink.href = theaterUrl;
     }
 
