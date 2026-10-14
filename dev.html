@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Who's Seeing What</title>
+
+<!-- iOS & Android PWA Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Who's Seeing What">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F0F11">
+
+<!-- iOS & Android Touch Icons -->
+<link rel="apple-touch-icon" href="ADC_Bug_R_2C_rgb.png">
+<link rel="apple-touch-icon-precomposed" href="ADC_Bug_R_2C_rgb.png">
+<link rel="icon" type="image/png" href="ADC_Bug_R_2C_rgb.png">
+<link rel="shortcut icon" href="ADC_Bug_R_2C_rgb.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0F0F11;
+  --surface: #19191D;
+  --surface-stub: #151518;
+  --border: #2D2D34;
+  --red: #E52329;
+  --red-hover: #C41B20;
+  --gold: #F5B041;
+  --green: #2ECC71;
+  --text: #F5F5F7;
+  --muted: #9E9EA8;
+  --dim: #6C6C77;
+  --stub: 96px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+}
+
+#ptr-banner {
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: height 0.2s ease;
+}
+
+main {
+  max-width: 520px;
+  margin: 0 auto;
+  padding-top: max(24px, calc(env(safe-area-inset-top) + 12px));
+  padding-left: max(18px, env(safe-area-inset-left));
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-bottom: max(48px, calc(env(safe-area-inset-bottom) + 24px));
+}
+
+header {
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+}
+
+h1 {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: clamp(38px, 11vw, 52px);
+  letter-spacing: 0.05em;
+  line-height: 0.95;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+h1 span.brand { color: var(--red); }
+
+.lede {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.status-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.status-bar:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #45454F;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+}
+.status-dot.syncing {
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(245, 176, 65, 0.6);
+  animation: pulse 1s infinite alternate;
+}
+@keyframes pulse {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+h2 {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  margin: 30px 0 14px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+h2::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Ticket Card */
+.ticket {
+  position: relative;
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 0 0 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.ticket:hover {
+  border-color: #45454F;
+  transform: translateY(-2px);
+}
+
+.ticket::before, .ticket::after {
+  content: "";
+  position: absolute;
+  right: calc(var(--stub) - 9px);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  z-index: 2;
+}
+.ticket::before { top: -10px; }
+.ticket::after { bottom: -10px; }
+
+.ticket.is-past {
+  opacity: 0.65;
+  background: #141417;
+  border-style: dashed;
+}
+.ticket.is-past:hover {
+  opacity: 0.9;
+  transform: none;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 18px 16px 18px 18px;
+}
+
+.stub {
+  width: var(--stub);
+  flex: none;
+  background: var(--surface-stub);
+  border-left: 2px dashed #3A3A44;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 6px;
+  text-align: center;
+}
+
+.time {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 34px;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+  color: var(--text);
+}
+
+.ampm {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+h3 {
+  margin: 0 0 4px;
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #FFFFFF;
+}
+
+.where {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.attendee-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.person-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+.person-info:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.av {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.names {
+  font-size: 13px;
+  font-weight: 600;
+  color: #E2E2E8;
+}
+
+.seat-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(245, 176, 65, 0.12);
+  border: 1px solid rgba(245, 176, 65, 0.4);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.group-hotspot {
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  background: var(--red);
+  color: #FFFFFF;
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  transition: background-color 0.15s ease;
+  box-shadow: 0 4px 12px rgba(229, 35, 41, 0.25);
+}
+
+.go:hover { background: var(--red-hover); }
+
+.web {
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.web:hover { color: var(--text); }
+
+.archive-toggle-wrap {
+  margin-top: 36px;
+  text-align: center;
+}
+
+.archive-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.03em;
+}
+.archive-toggle:hover {
+  border-color: #555562;
+  color: var(--text);
+  background: rgba(255,255,255,0.03);
+}
+
+#past-feed {
+  display: none;
+  margin-top: 24px;
+}
+#past-feed.open {
+  display: block;
+}
+
+/* Profile Modal Sheet */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px max(32px, calc(env(safe-area-inset-bottom) + 20px));
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-overlay.open .profile-card {
+  transform: translateY(0);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.profile-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.profile-av {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+.profile-name {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin: 0;
+}
+.profile-sub {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.profile-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--text);
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+.stat-box {
+  background: var(--surface-stub);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.stat-val {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--text);
+}
+.stat-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.empty, .error { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; }
+.error { color: #FF6B6B; }
+.note {
+  margin-top: 32px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--dim);
+}
+</style>
+</head>
+<body>
+<div style="background: #E67E22; color: #111; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 0;">
+  🛠 Dev / Staging Environment
+</div>
+<div id="ptr-banner">↓ Pull to refresh</div>
+
+<main>
+  <header>
+    <h1>Who's seeing <span class="brand">what</span></h1>
+    <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
+    <div class="status-bar" id="statusBar" title="Tap to check for new tickets">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Checking schedule…</span>
+    </div>
+  </header>
+
+  <div id="feed"><p class="empty">Checking showtimes…</p></div>
+
+  <!-- Past Screenings Archive -->
+  <div class="archive-toggle-wrap" id="archiveWrap" style="display:none;">
+    <button type="button" class="archive-toggle" id="archiveToggle">
+      Show Past Screenings (<span id="archiveCount">0</span>)
+    </button>
+  </div>
+  <div id="past-feed"></div>
+
+  <!-- Profile Drawer Modal -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="profile-user">
+          <div class="profile-av" id="profAv">K</div>
+          <div>
+            <h2 class="profile-name" id="profName">Name</h2>
+            <div class="profile-sub">Last 30 Days Activity</div>
+          </div>
+        </div>
+        <button type="button" class="profile-close" id="profClose">✕</button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">Movies Seen</div>
+          <div class="stat-val" id="profMovieCount">0</div>
+          <div class="stat-sub">Past 30 days</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Top Location</div>
+          <div class="stat-val" id="profTopTheater" style="font-size: 20px; line-height: 1.1;">—</div>
+          <div class="stat-sub" id="profTopTheaterCount">0 visits</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">Syncs every 5 minutes.</p>
+</main>
+
+<script>
+var API_URL = "var API_URL = "https://script.google.com/macros/s/AKfycbxnk8cCBlXy9YBeSZHrJkIhSqFPXAiesxNYOhQ18oM2rn1blqyzH82-GKaQJexBr9ub/exec?key=bd2a8a48bd064c4bb9ea3e013c8b2401";
+
+var COLORS = ["#E52329", "#F5B041", "#2A9D8F", "#457B9D", "#9B5DE5", "#00BBF9", "#E76F51"];
+var feed = document.getElementById("feed");
+var pastFeed = document.getElementById("past-feed");
+var statusText = document.getElementById("statusText");
+var statusDot = document.getElementById("statusDot");
+var statusBar = document.getElementById("statusBar");
+var archiveWrap = document.getElementById("archiveWrap");
+var archiveToggle = document.getElementById("archiveToggle");
+var archiveCount = document.getElementById("archiveCount");
+var ptrBanner = document.getElementById("ptr-banner");
+
+var HOME = "https://drafthouse.com";
+var THEATER_LINKS = {
+  "south lamar": "https://drafthouse.com/austin/theater/south-lamar",
+  "mueller": "https://drafthouse.com/austin/theater/mueller",
+  "village": "https://drafthouse.com/austin/theater/village",
+  "lakeline": "https://drafthouse.com/austin/theater/lakeline",
+  "slaughter": "https://drafthouse.com/austin/theater/slaughter-lane"
+};
+
+var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
+var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
+
+var REFRESH_INTERVAL_MS = 300000; // 5 minutes
+var nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
+var isSyncingNow = false;
+var isPastExpanded = false;
+var allRawEvents = [];
+
+function linkFor(theater) {
+  var t = (theater || "").toLowerCase();
+  for (var key in THEATER_LINKS) {
+    if (t.indexOf(key) !== -1) return THEATER_LINKS[key];
+  }
+  return HOME;
+}
+
+function cleanTheaterName(rawName) {
+  if (!rawName) return "Alamo Drafthouse";
+  return rawName
+    .replace(/alamo\s*drafthouse\s*[-–—:]?\s*/gi, '')
+    .replace(/alamo\s*[-–—:]?\s*/gi, '')
+    .trim();
+}
+
+function colorFor(name) {
+  var h = 0;
+  for (var i = 0; i < name.length; i++) {
+    h = ((h << 5) - h + name.charCodeAt(i)) >>> 0;
+  }
+  return COLORS[h % COLORS.length];
+}
+
+function parseTs(val) {
+  if (!val) return 0;
+  var str = String(val).trim().replace(/^'/, '');
+  var d = new Date(str);
+  if (!isNaN(d.getTime())) return d.getTime();
+
+  var m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
+  if (m) {
+    return new Date(+m[3], +m[1] - 1, +m[2], +m[4], +m[5]).getTime();
+  }
+  return 0;
+}
+
+function dayLabel(iso) {
+  if (!iso) return "Upcoming";
+  var clean = String(iso).replace(/^'/, '');
+  if (clean.length >= 10 && clean.indexOf('-') !== -1) {
+    var parts = clean.slice(0, 10).split("-");
+    if (parts.length === 3) {
+      var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+      return d.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC"
+      });
+    }
+  }
+  return clean.slice(0, 10);
+}
+
+function findSharedRows(seatMap) {
+  if (!seatMap) return [];
+  var rowCounts = {};
+  Object.keys(seatMap).forEach(function(person) {
+    var str = seatMap[person] || "";
+    var m = str.match(/Row\s*(\w+)/i);
+    if (m) {
+      var r = m[1].toUpperCase();
+      rowCounts[r] = (rowCounts[r] || 0) + 1;
+    }
+  });
+  return Object.keys(rowCounts).filter(function(r) { return rowCounts[r] > 1; });
+}
+
+function openProfile(personName) {
+  var thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  var now = Date.now();
+
+  var recentMovies = 0;
+  var theaterCounts = {};
+
+  allRawEvents.forEach(function(ev) {
+    var t = parseTs(ev.showtime);
+    if (t >= thirtyDaysAgo && t <= now) {
+      if ((ev.going || []).indexOf(personName) !== -1) {
+        recentMovies++;
+        var loc = cleanTheaterName(ev.theater);
+        theaterCounts[loc] = (theaterCounts[loc] || 0) + 1;
+      }
+    }
+  });
+
+  var topTheater = "None";
+  var maxVisits = 0;
+  Object.keys(theaterCounts).forEach(function(loc) {
+    if (theaterCounts[loc] > maxVisits) {
+      maxVisits = theaterCounts[loc];
+      topTheater = loc;
+    }
+  });
+
+  document.getElementById("profAv").style.background = colorFor(personName);
+  document.getElementById("profAv").textContent = personName.charAt(0).toUpperCase();
+  document.getElementById("profName").textContent = personName;
+  document.getElementById("profMovieCount").textContent = recentMovies;
+  document.getElementById("profTopTheater").textContent = topTheater;
+  document.getElementById("profTopTheaterCount").textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
+
+  document.getElementById("profileModal").classList.add("open");
+}
+
+document.getElementById("profClose").addEventListener("click", function() {
+  document.getElementById("profileModal").classList.remove("open");
+});
+
+document.getElementById("profileModal").addEventListener("click", function(e) {
+  if (e.target === this) {
+    this.classList.remove("open");
+  }
+});
+
+function createTicketCard(s, isPast) {
+  var showtime = String(s.showtime || "").replace(/^'/, '');
+  var timePart = showtime.indexOf("T") !== -1 ? showtime.split("T")[1] : showtime;
+  var timeTokens = timePart.split(":");
+  var hh = parseInt(timeTokens[0], 10);
+  if (isNaN(hh)) hh = 19;
+  var mm = timeTokens[1] ? timeTokens[1].slice(0, 2) : "00";
+
+  var el = document.createElement("article");
+  el.className = "ticket" + (isPast ? " is-past" : "");
+
+  var markup = '<div class="main-content"><h3></h3><p class="where"></p>';
+
+  var shared = findSharedRows(s.seatMap);
+  if (shared.length > 0 && !isPast) {
+    markup += '<div class="group-hotspot">★ Sitting together in Row ' + shared.join(', ') + '</div>';
+  }
+
+  markup += '<div class="who"></div>';
+  
+  if (!isPast) {
+    markup += '<a class="go">I Want To Go</a>' +
+      '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a>';
+  }
+  markup += '</div><div class="stub"><span class="time"></span><span class="ampm"></span></div>';
+
+  el.innerHTML = markup;
+  el.querySelector("h3").textContent = s.title || "Untitled Screening";
+  el.querySelector(".where").textContent = cleanTheaterName(s.theater);
+
+  var whoBox = el.querySelector(".who");
+  (s.going || []).forEach(function (n) {
+    var row = document.createElement("div");
+    row.className = "attendee-row";
+
+    var personInfo = document.createElement("div");
+    personInfo.className = "person-info";
+    personInfo.title = "View " + n + "'s profile";
+    personInfo.addEventListener("click", function(e) {
+      e.stopPropagation();
+      openProfile(n);
+    });
+
+    var a = document.createElement("span");
+    a.className = "av";
+    a.style.background = colorFor(n);
+    a.setAttribute("aria-hidden", "true");
+    a.textContent = n.charAt(0).toUpperCase();
+
+    var nameLabel = document.createElement("span");
+    nameLabel.className = "names";
+    nameLabel.textContent = n;
+
+    personInfo.appendChild(a);
+    personInfo.appendChild(nameLabel);
+    row.appendChild(personInfo);
+
+    if (s.seatMap && s.seatMap[n] && s.seatMap[n].toLowerCase() !== "seat") {
+      var seatBadge = document.createElement("span");
+      seatBadge.className = "seat-badge";
+      seatBadge.textContent = s.seatMap[n];
+      row.appendChild(seatBadge);
+    }
+
+    whoBox.appendChild(row);
+  });
+
+  if (!isPast) {
+    var theaterUrl = linkFor(s.theater);
+    var goLink = el.querySelector(".go");
+    var ua = navigator.userAgent || "";
+    var isIOS = /iphone|ipad|ipod/i.test(ua);
+    var isAndroid = /android/i.test(ua);
+
+    if (isAndroid) {
+      goLink.removeAttribute("target");
+      goLink.removeAttribute("rel");
+      goLink.href = "market://details?id=" + ANDROID_PKG;
+    } else if (isIOS) {
+      goLink.setAttribute("target", "_blank");
+      goLink.setAttribute("rel", "noopener noreferrer");
+      goLink.href = IOS_APP_STORE;
+    } else {
+      goLink.setAttribute("target", "_blank");
+      goLink.setAttribute("rel", "noopener noreferrer");
+      goLink.href = theaterUrl;
+    }
+
+    var webLink = el.querySelector(".web");
+    webLink.href = theaterUrl;
+  }
+
+  el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + mm;
+  el.querySelector(".ampm").textContent = hh >= 12 ? "PM" : "AM";
+
+  return el;
+}
+
+function renderFeed(targetContainer, shows, isPast) {
+  targetContainer.innerHTML = "";
+  if (!shows || !shows.length) {
+    if (!isPast) {
+      var p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "No upcoming bookings. When someone forwards an Alamo confirmation, it appears here.";
+      targetContainer.appendChild(p);
+    }
+    return;
+  }
+
+  var day = "";
+  shows.forEach(function (s) {
+    var label = dayLabel(s.showtime);
+    if (label !== day) {
+      day = label;
+      var h = document.createElement("h2");
+      h.textContent = day;
+      targetContainer.appendChild(h);
+    }
+    var card = createTicketCard(s, isPast);
+    if (card) targetContainer.appendChild(card);
+  });
+}
+
+function formatRemaining(sec) {
+  if (sec <= 60) return "1 min";
+  var m = Math.ceil(sec / 60);
+  return m + " mins";
+}
+
+function updateStatusText() {
+  if (isSyncingNow) return;
+  var secRemaining = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
+  statusText.textContent = "Live · Next refresh in " + formatRemaining(secRemaining);
+}
+
+function setSyncingState(isSyncing) {
+  isSyncingNow = isSyncing;
+  if (isSyncing) {
+    statusDot.className = "status-dot syncing";
+    statusText.textContent = "Checking for updates…";
+  } else {
+    statusDot.className = "status-dot";
+    nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
+    updateStatusText();
+  }
+}
+
+function load() {
+  setSyncingState(true);
+
+  fetch(API_URL)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data && data.error) {
+        statusDot.className = "status-dot";
+        statusText.textContent = "Error syncing";
+        return;
+      }
+
+      var upcoming = Array.isArray(data) ? data : (data.upcoming || []);
+      var past = Array.isArray(data) ? [] : (data.past || []);
+      lastSyncIso = data.lastSynced || null;
+
+      // Keep a flat record of all events to calculate user profiles
+      allRawEvents = upcoming.concat(past);
+
+      upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
+      past.sort(function(a, b) { return parseTs(b.showtime) - parseTs(a.showtime); });
+
+      renderFeed(feed, upcoming, false);
+
+      if (past && past.length > 0) {
+        archiveWrap.style.display = "block";
+        archiveCount.textContent = past.length;
+        renderFeed(pastFeed, past, true);
+      } else {
+        archiveWrap.style.display = "none";
+      }
+
+      setSyncingState(false);
+    })
+    .catch(function() {
+      statusDot.className = "status-dot";
+      statusText.textContent = "Offline · Tap to retry";
+    });
+}
+
+statusBar.addEventListener("click", function() {
+  load();
+});
+
+archiveToggle.addEventListener("click", function() {
+  isPastExpanded = !isPastExpanded;
+  if (isPastExpanded) {
+    pastFeed.classList.add("open");
+    archiveToggle.textContent = "Hide Past Screenings";
+  } else {
+    pastFeed.classList.remove("open");
+    archiveToggle.innerHTML = 'Show Past Screenings (<span id="archiveCount">' + archiveCount.textContent + '</span>)';
+  }
+});
+
+// Mobile Pull-to-refresh
+var touchStartY = 0;
+var touchDeltaY = 0;
+
+window.addEventListener("touchstart", function(e) {
+  if (window.scrollY === 0) {
+    touchStartY = e.touches[0].clientY;
+  } else {
+    touchStartY = 0;
+  }
+}, { passive: true });
+
+window.addEventListener("touchmove", function(e) {
+  if (touchStartY > 0 && window.scrollY === 0) {
+    touchDeltaY = e.touches[0].clientY - touchStartY;
+    if (touchDeltaY > 15 && touchDeltaY < 80) {
+      ptrBanner.style.height = touchDeltaY + "px";
+      ptrBanner.textContent = touchDeltaY > 55 ? "Release to refresh" : "↓ Pull to refresh";
+    }
+  }
+}, { passive: true });
+
+window.addEventListener("touchend", function() {
+  if (touchDeltaY > 55 && window.scrollY === 0) {
+    ptrBanner.style.height = "42px";
+    ptrBanner.textContent = "Syncing…";
+    load();
+    setTimeout(function() {
+      ptrBanner.style.height = "0";
+      touchDeltaY = 0;
+    }, 600);
+  } else {
+    ptrBanner.style.height = "0";
+    touchDeltaY = 0;
+  }
+}, { passive: true });
+
+// Initial load
+load();
+
+// Update countdown every 10 seconds and auto-fetch when time is up
+setInterval(function() {
+  if (!isSyncingNow && Date.now() >= nextRefreshAt) {
+    load();
+  } else {
+    updateStatusText();
+  }
+}, 10000);
+
+document.addEventListener("visibilitychange", function () {
+  if (!document.hidden) load();
+});
+</script>
+</body>
+</html>
