@@ -286,6 +286,10 @@ h3 {
   font-weight: 700;
   color: #FFFFFF;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
 }
 
 .names {
@@ -439,6 +443,10 @@ h3 {
   font-size: 20px;
   font-weight: 700;
   color: #FFFFFF;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
 }
 .profile-name {
   font-family: 'Bebas Neue', Impact, sans-serif;
@@ -594,6 +602,7 @@ var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
 var lastSyncIso = null;
 var isPastExpanded = false;
 var allRawEvents = [];
+var usersMap = {}; // Stores { "name": "image_path_or_url" }
 
 function linkFor(theater) {
   var t = (theater || "").toLowerCase();
@@ -617,6 +626,21 @@ function colorFor(name) {
     h = ((h << 5) - h + name.charCodeAt(i)) >>> 0;
   }
   return COLORS[h % COLORS.length];
+}
+
+function applyAvatar(element, name) {
+  var key = (name || "").toLowerCase().trim();
+  var avatarUrl = usersMap[key];
+
+  if (avatarUrl) {
+    element.style.backgroundImage = 'url("' + avatarUrl + '")';
+    element.style.backgroundColor = "transparent";
+    element.textContent = "";
+  } else {
+    element.style.backgroundImage = "none";
+    element.style.backgroundColor = colorFor(name);
+    element.textContent = (name || "?").charAt(0).toUpperCase();
+  }
 }
 
 function parseTs(val) {
@@ -691,8 +715,9 @@ function openProfile(personName) {
     }
   });
 
-  document.getElementById("profAv").style.background = colorFor(personName);
-  document.getElementById("profAv").textContent = personName.charAt(0).toUpperCase();
+  var profAv = document.getElementById("profAv");
+  applyAvatar(profAv, personName);
+
   document.getElementById("profName").textContent = personName;
   document.getElementById("profMovieCount").textContent = recentMovies;
   document.getElementById("profTopTheater").textContent = topTheater;
@@ -756,9 +781,8 @@ function createTicketCard(s, isPast) {
 
     var a = document.createElement("span");
     a.className = "av";
-    a.style.background = colorFor(n);
     a.setAttribute("aria-hidden", "true");
-    a.textContent = n.charAt(0).toUpperCase();
+    applyAvatar(a, n);
 
     var nameLabel = document.createElement("span");
     nameLabel.className = "names";
@@ -882,6 +906,9 @@ function load() {
       var upcoming = Array.isArray(data) ? data : (data.upcoming || []);
       var past = Array.isArray(data) ? [] : (data.past || []);
       lastSyncIso = data.lastSynced || null;
+
+      // Update global user avatars map
+      usersMap = data.users || {};
 
       // Keep a flat record of all events to calculate user profiles
       allRawEvents = upcoming.concat(past);
