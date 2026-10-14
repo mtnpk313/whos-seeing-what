@@ -591,7 +591,9 @@ var THEATER_LINKS = {
 var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
 var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
 
-var lastSyncIso = null;
+var REFRESH_INTERVAL_MS = 300000; // 5 minutes
+var nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
+var isSyncingNow = false;
 var isPastExpanded = false;
 var allRawEvents = [];
 
@@ -835,34 +837,26 @@ function renderFeed(targetContainer, shows, isPast) {
   });
 }
 
+function formatRemaining(sec) {
+  if (sec <= 60) return "1 min";
+  var m = Math.ceil(sec / 60);
+  return m + " mins";
+}
+
 function updateStatusText() {
-  if (!lastSyncIso) {
-    statusText.textContent = "Live · Connected";
-    return;
-  }
-
-  var syncDate = new Date(lastSyncIso);
-  var diffSec = Math.floor((Date.now() - syncDate.getTime()) / 1000);
-
-  if (diffSec < 60) {
-    statusText.textContent = "Live · Synced just now";
-  } else {
-    var minAgo = Math.floor(diffSec / 60);
-    if (minAgo < 60) {
-      statusText.textContent = "Live · Synced " + minAgo + "m ago";
-    } else {
-      var hrAgo = Math.floor(minAgo / 60);
-      statusText.textContent = "Live · Synced " + hrAgo + "h ago";
-    }
-  }
+  if (isSyncingNow) return;
+  var secRemaining = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
+  statusText.textContent = "Live · Next refresh in " + formatRemaining(secRemaining);
 }
 
 function setSyncingState(isSyncing) {
+  isSyncingNow = isSyncing;
   if (isSyncing) {
     statusDot.className = "status-dot syncing";
     statusText.textContent = "Checking for updates…";
   } else {
     statusDot.className = "status-dot";
+    nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
     updateStatusText();
   }
 }
@@ -959,10 +953,18 @@ window.addEventListener("touchend", function() {
   }
 }, { passive: true });
 
-// Initial load & background intervals
+// Initial load
 load();
-setInterval(load, 120000); // Check API every 2 minutes
-setInterval(updateStatusText, 30000); // Recalculate "X min ago" text every 30s
+
+// Update countdown every 10 seconds and auto-fetch when time is up
+setInterval(function() {
+  if (!isSyncingNow && Date.now() >= nextRefreshAt) {
+    load();
+  } else {
+    updateStatusText();
+  }
+}, 10000);
+
 document.addEventListener("visibilitychange", function () {
   if (!document.hidden) load();
 });
