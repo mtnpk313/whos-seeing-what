@@ -267,6 +267,13 @@ h3 {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+.person-info:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .av {
@@ -378,6 +385,120 @@ h3 {
   display: block;
 }
 
+/* Profile Modal Sheet */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px max(32px, calc(env(safe-area-inset-bottom) + 20px));
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-overlay.open .profile-card {
+  transform: translateY(0);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.profile-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.profile-av {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+.profile-name {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin: 0;
+}
+.profile-sub {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.profile-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--text);
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+.stat-box {
+  background: var(--surface-stub);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.stat-val {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--text);
+}
+.stat-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
 .empty, .error { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; }
 .error { color: #FF6B6B; }
 .note {
@@ -412,7 +533,36 @@ h3 {
   </div>
   <div id="past-feed"></div>
 
-  <p class="note">Automatically syncs a few minutes after someone forwards or returns an Alamo ticket.</p>
+  <!-- Profile Drawer Modal -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="profile-user">
+          <div class="profile-av" id="profAv">K</div>
+          <div>
+            <h2 class="profile-name" id="profName">Name</h2>
+            <div class="profile-sub">Last 30 Days Activity</div>
+          </div>
+        </div>
+        <button type="button" class="profile-close" id="profClose">✕</button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">Movies Seen</div>
+          <div class="stat-val" id="profMovieCount">0</div>
+          <div class="stat-sub">Past 30 days</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Top Location</div>
+          <div class="stat-val" id="profTopTheater" style="font-size: 20px; line-height: 1.1;">—</div>
+          <div class="stat-sub" id="profTopTheaterCount">0 visits</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">Syncs every 5 minutes.</p>
 </main>
 
 <script>
@@ -443,6 +593,7 @@ var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
 
 var lastSyncIso = null;
 var isPastExpanded = false;
+var allRawEvents = [];
 
 function linkFor(theater) {
   var t = (theater || "").toLowerCase();
@@ -513,6 +664,53 @@ function findSharedRows(seatMap) {
   return Object.keys(rowCounts).filter(function(r) { return rowCounts[r] > 1; });
 }
 
+function openProfile(personName) {
+  var thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  var now = Date.now();
+
+  var recentMovies = 0;
+  var theaterCounts = {};
+
+  allRawEvents.forEach(function(ev) {
+    var t = parseTs(ev.showtime);
+    if (t >= thirtyDaysAgo && t <= now) {
+      if ((ev.going || []).indexOf(personName) !== -1) {
+        recentMovies++;
+        var loc = cleanTheaterName(ev.theater);
+        theaterCounts[loc] = (theaterCounts[loc] || 0) + 1;
+      }
+    }
+  });
+
+  var topTheater = "None";
+  var maxVisits = 0;
+  Object.keys(theaterCounts).forEach(function(loc) {
+    if (theaterCounts[loc] > maxVisits) {
+      maxVisits = theaterCounts[loc];
+      topTheater = loc;
+    }
+  });
+
+  document.getElementById("profAv").style.background = colorFor(personName);
+  document.getElementById("profAv").textContent = personName.charAt(0).toUpperCase();
+  document.getElementById("profName").textContent = personName;
+  document.getElementById("profMovieCount").textContent = recentMovies;
+  document.getElementById("profTopTheater").textContent = topTheater;
+  document.getElementById("profTopTheaterCount").textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
+
+  document.getElementById("profileModal").classList.add("open");
+}
+
+document.getElementById("profClose").addEventListener("click", function() {
+  document.getElementById("profileModal").classList.remove("open");
+});
+
+document.getElementById("profileModal").addEventListener("click", function(e) {
+  if (e.target === this) {
+    this.classList.remove("open");
+  }
+});
+
 function createTicketCard(s, isPast) {
   var showtime = String(s.showtime || "").replace(/^'/, '');
   var timePart = showtime.indexOf("T") !== -1 ? showtime.split("T")[1] : showtime;
@@ -550,6 +748,11 @@ function createTicketCard(s, isPast) {
 
     var personInfo = document.createElement("div");
     personInfo.className = "person-info";
+    personInfo.title = "View " + n + "'s profile";
+    personInfo.addEventListener("click", function(e) {
+      e.stopPropagation();
+      openProfile(n);
+    });
 
     var a = document.createElement("span");
     a.className = "av";
@@ -679,6 +882,9 @@ function load() {
       var upcoming = Array.isArray(data) ? data : (data.upcoming || []);
       var past = Array.isArray(data) ? [] : (data.past || []);
       lastSyncIso = data.lastSynced || null;
+
+      // Keep a flat record of all events to calculate user profiles
+      allRawEvents = upcoming.concat(past);
 
       upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
       past.sort(function(a, b) { return parseTs(b.showtime) - parseTs(a.showtime); });
