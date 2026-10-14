@@ -583,20 +583,17 @@ function createTicketCard(s, isPast) {
     var isAndroid = /android/i.test(ua);
 
     if (isAndroid) {
-      // Remove target and rel so Android Chrome doesn't treat the intent URL as a blocked popup
+      // Directs to the Google Play Store app listing (shows 'Open' if installed, 'Install' if not)
       goLink.removeAttribute("target");
       goLink.removeAttribute("rel");
-
-      // Strip protocol to form a valid Chrome Intent URI
-      var hostAndPath = theaterUrl.replace(/^https?:\/\//i, '');
-      goLink.href = "intent://" + hostAndPath + 
-        "#Intent;scheme=https;package=" + ANDROID_PKG + 
-        ";S.browser_fallback_url=" + encodeURIComponent(theaterUrl) + ";end";
+      goLink.href = "market://details?id=" + ANDROID_PKG;
     } else if (isIOS) {
+      // Directs to the iOS App Store listing
       goLink.setAttribute("target", "_blank");
       goLink.setAttribute("rel", "noopener noreferrer");
-      goLink.href = theaterUrl;
+      goLink.href = IOS_APP_STORE;
     } else {
+      // Desktop / Other browsers open the theater booking web page
       goLink.setAttribute("target", "_blank");
       goLink.setAttribute("rel", "noopener noreferrer");
       goLink.href = theaterUrl;
