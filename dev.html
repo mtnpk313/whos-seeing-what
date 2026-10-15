@@ -720,6 +720,8 @@ var nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
 var isSyncingNow = false;
 var isPastExpanded = false;
 var allRawEvents = [];
+var pioneerStatsData = {};
+var totalsData = {};
 var lastSyncIso = null;
 
 (function checkMagicLink() {
@@ -863,6 +865,12 @@ function openProfile(personName) {
     }
   });
 
+  // Pioneer vs Tag-Along calculations
+  var pioneerCount = pioneerStatsData[personName] || 0;
+  var totalSeen = totalsData[personName] || recentMovies;
+  var tagAlongCount = Math.max(0, totalSeen - pioneerCount);
+  var pioneerPct = totalSeen > 0 ? Math.round((pioneerCount / totalSeen) * 100) : 0;
+
   var profAv = document.getElementById("profAv");
   var profName = document.getElementById("profName");
   var profMovieCount = document.getElementById("profMovieCount");
@@ -877,7 +885,7 @@ function openProfile(personName) {
   if (profMovieCount) profMovieCount.textContent = recentMovies;
   if (profTopTheater) profTopTheater.textContent = topTheater;
   if (profTopTheaterCount) {
-    profTopTheaterCount.textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
+    profTopTheaterCount.textContent = pioneerCount + " Pioneer (" + pioneerPct + "%) / " + tagAlongCount + " Tag-Along";
   }
 
   var modal = document.getElementById("profileModal");
@@ -1088,6 +1096,8 @@ function load() {
       lastSyncIso = data.lastSynced || null;
 
       allRawEvents = upcoming.concat(past);
+      pioneerStatsData = data.pioneerStats || {};
+      totalsData = data.totals || {};
 
       upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
       past.sort(function(a, b) { return parseTs(b.showtime) - parseTs(a.showtime); });
