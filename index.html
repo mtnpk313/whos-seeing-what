@@ -96,6 +96,13 @@ h1 span.brand { color: var(--red); }
   line-height: 1.45;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .status-bar {
   display: inline-flex;
   align-items: center;
@@ -114,6 +121,21 @@ h1 span.brand { color: var(--red); }
 .status-bar:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: #45454F;
+}
+
+.lock-btn {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.15s ease;
+}
+.lock-btn:hover {
+  color: var(--muted);
 }
 
 .status-dot {
@@ -498,6 +520,83 @@ h3 {
   margin-top: 4px;
 }
 
+/* Auth / Passcode Lock Screen */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 17, 0.94);
+  backdrop-filter: blur(10px);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.auth-overlay.open {
+  display: flex;
+}
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+}
+.auth-badge {
+  display: inline-block;
+  background: rgba(229, 35, 41, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(229, 35, 41, 0.35);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+.auth-title {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 34px;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  color: var(--text);
+  line-height: 1;
+}
+.auth-desc {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 20px;
+  line-height: 1.45;
+}
+.auth-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  text-align: center;
+  margin-bottom: 12px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.auth-input:focus {
+  border-color: var(--gold);
+}
+.auth-error {
+  color: #FF6B6B;
+  font-size: 12px;
+  font-weight: 600;
+  margin: -4px 0 12px;
+  display: none;
+}
+
 .empty, .error { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; }
 .error { color: #FF6B6B; }
 .note {
@@ -512,13 +611,30 @@ h3 {
 
 <div id="ptr-banner">↓ Pull to refresh</div>
 
+<!-- One-Time Passcode Lock Screen -->
+<div class="auth-overlay" id="authModal">
+  <div class="auth-card">
+    <span class="auth-badge">Crew Only</span>
+    <div class="auth-title">Enter Crew Passcode</div>
+    <p class="auth-desc">Enter the secret passcode once to unlock the schedule on this device.</p>
+    <form id="authForm">
+      <input type="password" id="authInput" class="auth-input" placeholder="Passcode…" autocomplete="off" required>
+      <div class="auth-error" id="authError">Invalid passcode. Try again.</div>
+      <button type="submit" class="go">Unlock Schedule</button>
+    </form>
+  </div>
+</div>
+
 <main>
   <header>
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
-    <div class="status-bar" id="statusBar" title="Tap to check for new tickets">
-      <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">Checking schedule…</span>
+    <div class="header-controls">
+      <div class="status-bar" id="statusBar" title="Tap to check for new tickets">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Checking schedule…</span>
+      </div>
+      <button type="button" class="lock-btn" id="lockBtn" title="Clear saved passcode on this device">🔒 Lock</button>
     </div>
   </header>
 
@@ -565,7 +681,8 @@ h3 {
 </main>
 
 <script>
-var API_URL = "https://script.google.com/macros/s/AKfycbyLNQyTF0zPjFIW176T6oCvs2tOikWQ11VVXpzUquS4NDSpT2scqSB0EoKCkDJ-ekBi/exec?key=bd2a8a48bd064c4bb9ea3e013c8b2401";
+var BASE_API_URL = "https://script.google.com/macros/s/AKfycbyLNQyTF0zPjFIW176T6oCvs2tOikWQ11VVXpzUquS4NDSpT2scqSB0EoKCkDJ-ekBi/exec";
+var STORAGE_KEY = "alamo_crew_passcode_prod";
 
 var COLORS = ["#E52329", "#F5B041", "#2A9D8F", "#457B9D", "#9B5DE5", "#00BBF9", "#E76F51"];
 var feed = document.getElementById("feed");
@@ -577,6 +694,12 @@ var archiveWrap = document.getElementById("archiveWrap");
 var archiveToggle = document.getElementById("archiveToggle");
 var archiveCount = document.getElementById("archiveCount");
 var ptrBanner = document.getElementById("ptr-banner");
+
+var authModal = document.getElementById("authModal");
+var authForm = document.getElementById("authForm");
+var authInput = document.getElementById("authInput");
+var authError = document.getElementById("authError");
+var lockBtn = document.getElementById("lockBtn");
 
 var HOME = "https://drafthouse.com";
 var THEATER_LINKS = {
@@ -590,11 +713,57 @@ var THEATER_LINKS = {
 var IOS_APP_STORE = "https://apps.apple.com/us/app/alamo-drafthouse/id477620444";
 var ANDROID_PKG = "nz.co.vista.android.movie.alamo";
 
-var REFRESH_INTERVAL_MS = 300000; // 5 minutes
+var REFRESH_INTERVAL_MS = 300000;
 var nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
 var isSyncingNow = false;
 var isPastExpanded = false;
 var allRawEvents = [];
+var lastSyncIso = null;
+
+(function checkMagicLink() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var magicCode = params.get("code") || params.get("key");
+    if (magicCode) {
+      localStorage.setItem(STORAGE_KEY, magicCode.trim());
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  } catch (e) {}
+})();
+
+function getSavedPasscode() {
+  return localStorage.getItem(STORAGE_KEY) || "";
+}
+
+function showLockScreen(showError) {
+  authError.style.display = showError ? "block" : "none";
+  authModal.classList.add("open");
+  setTimeout(function() { authInput.focus(); }, 50);
+}
+
+function hideLockScreen() {
+  authModal.classList.remove("open");
+  authError.style.display = "none";
+}
+
+authForm.addEventListener("submit", function(e) {
+  e.preventDefault();
+  var code = authInput.value.trim();
+  if (!code) return;
+  localStorage.setItem(STORAGE_KEY, code);
+  authInput.value = "";
+  hideLockScreen();
+  load();
+});
+
+lockBtn.addEventListener("click", function() {
+  localStorage.removeItem(STORAGE_KEY);
+  feed.innerHTML = '<p class="empty">Schedule locked.</p>';
+  pastFeed.innerHTML = "";
+  archiveWrap.style.display = "none";
+  statusText.textContent = "Locked";
+  showLockScreen(false);
+});
 
 function linkFor(theater) {
   var t = (theater || "").toLowerCase();
@@ -607,8 +776,8 @@ function linkFor(theater) {
 function cleanTheaterName(rawName) {
   if (!rawName) return "Alamo Drafthouse";
   return rawName
-    .replace(/alamo\s*drafthouse\s*[-–—:]?\s*/gi, '')
-    .replace(/alamo\s*[-–—:]?\s*/gi, '')
+    .replace(/alamo\s*drafthouse\s*[-–—:]?\s*/gi, "")
+    .replace(/alamo\s*[-–—:]?\s*/gi, "")
     .trim();
 }
 
@@ -622,7 +791,7 @@ function colorFor(name) {
 
 function parseTs(val) {
   if (!val) return 0;
-  var str = String(val).trim().replace(/^'/, '');
+  var str = String(val).trim().replace(/^'/, "");
   var d = new Date(str);
   if (!isNaN(d.getTime())) return d.getTime();
 
@@ -635,8 +804,8 @@ function parseTs(val) {
 
 function dayLabel(iso) {
   if (!iso) return "Upcoming";
-  var clean = String(iso).replace(/^'/, '');
-  if (clean.length >= 10 && clean.indexOf('-') !== -1) {
+  var clean = String(iso).replace(/^'/, "");
+  if (clean.length >= 10 && clean.indexOf("-") !== -1) {
     var parts = clean.slice(0, 10).split("-");
     if (parts.length === 3) {
       var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
@@ -692,28 +861,46 @@ function openProfile(personName) {
     }
   });
 
-  document.getElementById("profAv").style.background = colorFor(personName);
-  document.getElementById("profAv").textContent = personName.charAt(0).toUpperCase();
-  document.getElementById("profName").textContent = personName;
-  document.getElementById("profMovieCount").textContent = recentMovies;
-  document.getElementById("profTopTheater").textContent = topTheater;
-  document.getElementById("profTopTheaterCount").textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
+  var profAv = document.getElementById("profAv");
+  var profName = document.getElementById("profName");
+  var profMovieCount = document.getElementById("profMovieCount");
+  var profTopTheater = document.getElementById("profTopTheater");
+  var profTopTheaterCount = document.getElementById("profTopTheaterCount");
 
-  document.getElementById("profileModal").classList.add("open");
+  if (profAv) {
+    profAv.style.background = colorFor(personName);
+    profAv.textContent = personName.charAt(0).toUpperCase();
+  }
+  if (profName) profName.textContent = personName;
+  if (profMovieCount) profMovieCount.textContent = recentMovies;
+  if (profTopTheater) profTopTheater.textContent = topTheater;
+  if (profTopTheaterCount) {
+    profTopTheaterCount.textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
+  }
+
+  var modal = document.getElementById("profileModal");
+  if (modal) modal.classList.add("open");
 }
 
-document.getElementById("profClose").addEventListener("click", function() {
-  document.getElementById("profileModal").classList.remove("open");
-});
+var profCloseBtn = document.getElementById("profClose");
+if (profCloseBtn) {
+  profCloseBtn.addEventListener("click", function() {
+    var modal = document.getElementById("profileModal");
+    if (modal) modal.classList.remove("open");
+  });
+}
 
-document.getElementById("profileModal").addEventListener("click", function(e) {
-  if (e.target === this) {
-    this.classList.remove("open");
-  }
-});
+var profileModalElem = document.getElementById("profileModal");
+if (profileModalElem) {
+  profileModalElem.addEventListener("click", function(e) {
+    if (e.target === this) {
+      this.classList.remove("open");
+    }
+  });
+}
 
 function createTicketCard(s, isPast) {
-  var showtime = String(s.showtime || "").replace(/^'/, '');
+  var showtime = String(s.showtime || "").replace(/^'/, "");
   var timePart = showtime.indexOf("T") !== -1 ? showtime.split("T")[1] : showtime;
   var timeTokens = timePart.split(":");
   var hh = parseInt(timeTokens[0], 10);
@@ -727,11 +914,11 @@ function createTicketCard(s, isPast) {
 
   var shared = findSharedRows(s.seatMap);
   if (shared.length > 0 && !isPast) {
-    markup += '<div class="group-hotspot">★ Sitting together in Row ' + shared.join(', ') + '</div>';
+    markup += '<div class="group-hotspot">★ Sitting together in Row ' + shared.join(", ") + '</div>';
   }
 
   markup += '<div class="who"></div>';
-  
+
   if (!isPast) {
     markup += '<a class="go">I Want To Go</a>' +
       '<a class="web" target="_blank" rel="noopener noreferrer">Or book on drafthouse.com</a>';
@@ -844,6 +1031,10 @@ function formatRemaining(sec) {
 
 function updateStatusText() {
   if (isSyncingNow) return;
+  if (!getSavedPasscode()) {
+    statusText.textContent = "Locked";
+    return;
+  }
   var secRemaining = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
   statusText.textContent = "Live · Next refresh in " + formatRemaining(secRemaining);
 }
@@ -861,22 +1052,39 @@ function setSyncingState(isSyncing) {
 }
 
 function load() {
+  var key = getSavedPasscode();
+  if (!key) {
+    statusDot.className = "status-dot";
+    statusText.textContent = "Locked";
+    showLockScreen(false);
+    return;
+  }
+
   setSyncingState(true);
 
-  fetch(API_URL)
+  var fullUrl = BASE_API_URL + "?key=" + encodeURIComponent(key);
+
+  fetch(fullUrl)
     .then(function(res) { return res.json(); })
     .then(function(data) {
       if (data && data.error) {
         statusDot.className = "status-dot";
-        statusText.textContent = "Error syncing";
+        if (String(data.error).toLowerCase().indexOf("unauthorized") !== -1) {
+          localStorage.removeItem(STORAGE_KEY);
+          statusText.textContent = "Locked";
+          showLockScreen(true);
+        } else {
+          statusText.textContent = "Error syncing";
+        }
         return;
       }
+
+      hideLockScreen();
 
       var upcoming = Array.isArray(data) ? data : (data.upcoming || []);
       var past = Array.isArray(data) ? [] : (data.past || []);
       lastSyncIso = data.lastSynced || null;
 
-      // Keep a flat record of all events to calculate user profiles
       allRawEvents = upcoming.concat(past);
 
       upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
@@ -894,7 +1102,8 @@ function load() {
 
       setSyncingState(false);
     })
-    .catch(function() {
+    .catch(function(err) {
+      console.error("Fetch error:", err);
       statusDot.className = "status-dot";
       statusText.textContent = "Offline · Tap to retry";
     });
@@ -957,7 +1166,7 @@ load();
 
 // Update countdown every 10 seconds and auto-fetch when time is up
 setInterval(function() {
-  if (!isSyncingNow && Date.now() >= nextRefreshAt) {
+  if (!isSyncingNow && getSavedPasscode() && Date.now() >= nextRefreshAt) {
     load();
   } else {
     updateStatusText();
@@ -965,7 +1174,7 @@ setInterval(function() {
 }, 10000);
 
 document.addEventListener("visibilitychange", function () {
-  if (!document.hidden) load();
+  if (!document.hidden && getSavedPasscode()) load();
 });
 </script>
 </body>
