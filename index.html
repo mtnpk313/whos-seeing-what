@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Who's Seeing What</title>
+<title>Who's Seeing What [DEV]</title>
 
 <!-- iOS & Android PWA Meta Tags -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -74,7 +74,7 @@ main {
 
 header {
   margin-bottom: 20px;
-  padding-bottom: 18px;
+  padding-bottom: 12px;
 }
 
 h1 {
@@ -101,6 +101,7 @@ h1 span.brand { color: var(--red); }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  margin-top: 14px;
 }
 
 .status-bar {
@@ -153,6 +154,47 @@ h1 span.brand { color: var(--red); }
 @keyframes pulse {
   from { opacity: 0.4; }
   to { opacity: 1; }
+}
+
+/* Crew Standings Box */
+.standings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.standings-title {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.standings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.standings-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.standings-val {
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  padding: 2px 10px;
+  border-radius: 6px;
 }
 
 h2 {
@@ -609,6 +651,9 @@ h3 {
 </head>
 <body>
 
+<div style="background: #E67E22; color: #111; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 0;">
+  🛠 Dev / Staging Environment
+</div>
 <div id="ptr-banner">↓ Pull to refresh</div>
 
 <!-- One-Time Passcode Lock Screen -->
@@ -629,6 +674,20 @@ h3 {
   <header>
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
+    
+    <!-- 30-Day Crew Standings Leaderboard -->
+    <div class="standings-card" id="standingsCard">
+      <div class="standings-title">30-Day Crew Standings</div>
+      <div class="standings-row">
+        <span class="standings-label">👑 Top Pioneer</span>
+        <span class="standings-val" id="champName">—</span>
+      </div>
+      <div class="standings-row">
+        <span class="standings-label">🚂 Top Tag-Along</span>
+        <span class="standings-val" id="tagAlongName">—</span>
+      </div>
+    </div>
+
     <div class="header-controls">
       <div class="status-bar" id="statusBar" title="Tap to check for new tickets">
         <span class="status-dot" id="statusDot"></span>
@@ -701,6 +760,9 @@ var authInput = document.getElementById("authInput");
 var authError = document.getElementById("authError");
 var lockBtn = document.getElementById("lockBtn");
 
+var champNameEl = document.getElementById("champName");
+var tagAlongNameEl = document.getElementById("tagAlongName");
+
 var HOME = "https://drafthouse.com";
 var THEATER_LINKS = {
   "south lamar": "https://drafthouse.com/austin/theater/south-lamar",
@@ -718,6 +780,10 @@ var nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
 var isSyncingNow = false;
 var isPastExpanded = false;
 var allRawEvents = [];
+var pioneerChampion = null;
+var pioneerCount = 0;
+var topTagAlong = null;
+var tagAlongCount = 0;
 var lastSyncIso = null;
 
 (function checkMagicLink() {
@@ -871,7 +937,28 @@ function openProfile(personName) {
     profAv.style.background = colorFor(personName);
     profAv.textContent = personName.charAt(0).toUpperCase();
   }
-  if (profName) profName.textContent = personName;
+
+  if (profName) {
+    profName.innerHTML = "";
+    var nameText = document.createTextNode(personName + " ");
+    profName.appendChild(nameText);
+
+    if (personName === pioneerChampion) {
+      var pBadge = document.createElement("span");
+      pBadge.style.fontSize = "22px";
+      pBadge.title = "30-Day Pioneer Champion (" + pioneerCount + ")";
+      pBadge.textContent = "👑 " + pioneerCount;
+      profName.appendChild(pBadge);
+    }
+    if (personName === topTagAlong) {
+      var tBadge = document.createElement("span");
+      tBadge.style.fontSize = "22px";
+      tBadge.title = "Top Tag-Along (" + tagAlongCount + ")";
+      tBadge.textContent = "🚂 " + tagAlongCount;
+      profName.appendChild(tBadge);
+    }
+  }
+
   if (profMovieCount) profMovieCount.textContent = recentMovies;
   if (profTopTheater) profTopTheater.textContent = topTheater;
   if (profTopTheaterCount) {
@@ -1086,6 +1173,14 @@ function load() {
       lastSyncIso = data.lastSynced || null;
 
       allRawEvents = upcoming.concat(past);
+      pioneerChampion = data.pioneerChampion || null;
+      pioneerCount = data.pioneerCount || 0;
+      topTagAlong = data.topTagAlong || null;
+      tagAlongCount = data.tagAlongCount || 0;
+
+      // Update Standings UI with names and counts
+      champNameEl.textContent = pioneerChampion ? (pioneerChampion + " (" + pioneerCount + ")") : "None yet";
+      tagAlongNameEl.textContent = topTagAlong ? (topTagAlong + " (" + tagAlongCount + ")") : "None yet";
 
       upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
       past.sort(function(a, b) { return parseTs(b.showtime) - parseTs(a.showtime); });
