@@ -165,7 +165,7 @@ h1 span.brand { color: var(--red); }
   margin-bottom: 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 .standings-title {
   font-family: 'Bebas Neue', Impact, sans-serif;
@@ -173,28 +173,39 @@ h1 span.brand { color: var(--red); }
   letter-spacing: 0.06em;
   color: var(--gold);
   text-transform: uppercase;
-  margin-bottom: 2px;
 }
 .standings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  gap: 18px;
 }
 .standings-label {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted);
-  font-weight: 600;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13px;
+}
+.standings-desc {
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 2px;
+  line-height: 1.35;
 }
 .standings-val {
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--text);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
-  padding: 2px 10px;
+  padding: 3px 8px;
   border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 h2 {
@@ -672,15 +683,23 @@ h3 {
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
     
-    <!-- 30-Day Crew Standings Leaderboard -->
+   <!-- 30-Day Crew Standings Leaderboard -->
     <div class="standings-card" id="standingsCard">
       <div class="standings-title">30-Day Crew Standings</div>
+      
       <div class="standings-row">
-        <span class="standings-label">👑 Top Pioneer</span>
+        <div>
+          <span class="standings-label">👑 Top Pioneer</span>
+          <div class="standings-desc">Calls the shots. Booked the most movies that got the crew to join.</div>
+        </div>
         <span class="standings-val" id="champName">—</span>
       </div>
+
       <div class="standings-row">
-        <span class="standings-label">🚂 Top Tag-Along</span>
+        <div>
+          <span class="standings-label">🚂 Top Tag-Along</span>
+          <div class="standings-desc">Never misses out. Joined the most screenings someone else locked in first.</div>
+        </div>
         <span class="standings-val" id="tagAlongName">—</span>
       </div>
     </div>
