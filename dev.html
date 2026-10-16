@@ -90,20 +90,10 @@ h1 {
 h1 span.brand { color: var(--red); }
 
 .lede {
-  margin: 0 0 10px;
+  margin: 0 0 14px;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.45;
-}
-
-.badge-legend {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 14px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
 }
 
 .header-controls {
@@ -323,13 +313,6 @@ h3 {
   font-size: 13px;
   font-weight: 600;
   color: #E2E2E8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.badge-tag {
-  font-size: 12px;
 }
 
 .seat-badge {
@@ -646,11 +629,6 @@ h3 {
   <header>
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
-    <div class="badge-legend">
-      <span>👑 30-Day Pioneer Champ</span>
-      <span>•</span>
-      <span>🚂 Top Tag-Along</span>
-    </div>
     <div class="header-controls">
       <div class="status-bar" id="statusBar" title="Tap to check for new tickets">
         <span class="status-dot" id="statusDot"></span>
@@ -896,10 +874,26 @@ function openProfile(personName) {
     profAv.textContent = personName.charAt(0).toUpperCase();
   }
 
-  var badgeHtml = personName;
-  if (personName === pioneerChampion) badgeHtml += ' <span title="30-Day Pioneer Champion">👑</span>';
-  if (personName === topTagAlong) badgeHtml += ' <span title="Top Tag-Along">🚂</span>';
-  if (profName) profName.innerHTML = badgeHtml;
+  if (profName) {
+    profName.innerHTML = "";
+    var nameText = document.createTextNode(personName + " ");
+    profName.appendChild(nameText);
+
+    if (personName === pioneerChampion) {
+      var pBadge = document.createElement("span");
+      pBadge.style.fontSize = "22px";
+      pBadge.title = "30-Day Pioneer Champion";
+      pBadge.textContent = "👑";
+      profName.appendChild(pBadge);
+    }
+    if (personName === topTagAlong) {
+      var tBadge = document.createElement("span");
+      tBadge.style.fontSize = "22px";
+      tBadge.title = "Top Tag-Along";
+      tBadge.textContent = "🚂";
+      profName.appendChild(tBadge);
+    }
+  }
 
   if (profMovieCount) profMovieCount.textContent = recentMovies;
   if (profTopTheater) profTopTheater.textContent = topTheater;
@@ -979,24 +973,7 @@ function createTicketCard(s, isPast) {
 
     var nameLabel = document.createElement("span");
     nameLabel.className = "names";
-    
-    var nameText = document.createTextNode(n);
-    nameLabel.appendChild(nameText);
-
-    if (n === pioneerChampion) {
-      var pBadge = document.createElement("span");
-      pBadge.className = "badge-tag";
-      pBadge.title = "30-Day Pioneer Champion";
-      pBadge.textContent = "👑";
-      nameLabel.appendChild(pBadge);
-    }
-    if (n === topTagAlong) {
-      var tBadge = document.createElement("span");
-      tBadge.className = "badge-tag";
-      tBadge.title = "Top Tag-Along";
-      tBadge.textContent = "🚂";
-      nameLabel.appendChild(tBadge);
-    }
+    nameLabel.textContent = n;
 
     personInfo.appendChild(a);
     personInfo.appendChild(nameLabel);
