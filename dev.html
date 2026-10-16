@@ -74,7 +74,7 @@ main {
 
 header {
   margin-bottom: 20px;
-  padding-bottom: 18px;
+  padding-bottom: 12px;
 }
 
 h1 {
@@ -101,6 +101,7 @@ h1 span.brand { color: var(--red); }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  margin-top: 14px;
 }
 
 .status-bar {
@@ -153,6 +154,47 @@ h1 span.brand { color: var(--red); }
 @keyframes pulse {
   from { opacity: 0.4; }
   to { opacity: 1; }
+}
+
+/* Crew Standings Box */
+.standings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.standings-title {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.standings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.standings-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.standings-val {
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  padding: 2px 10px;
+  border-radius: 6px;
 }
 
 h2 {
@@ -632,6 +674,20 @@ h3 {
   <header>
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
+    
+    <!-- 30-Day Crew Standings Leaderboard -->
+    <div class="standings-card" id="standingsCard">
+      <div class="standings-title">30-Day Crew Standings</div>
+      <div class="standings-row">
+        <span class="standings-label">👑 Top Pioneer</span>
+        <span class="standings-val" id="champName">—</span>
+      </div>
+      <div class="standings-row">
+        <span class="standings-label">🚂 Top Tag-Along</span>
+        <span class="standings-val" id="tagAlongName">—</span>
+      </div>
+    </div>
+
     <div class="header-controls">
       <div class="status-bar" id="statusBar" title="Tap to check for new tickets">
         <span class="status-dot" id="statusDot"></span>
@@ -684,7 +740,7 @@ h3 {
 </main>
 
 <script>
-var BASE_API_URL = "https://script.google.com/macros/s/AKfycbxnk8cCBlXy9YBeSZHrJkIhSqFPXAiesxNYOhQ18oM2rn1blqyzH82-GKaQJexBr9ub/exec";
+var BASE_API_URL = "https://script.google.com/macros/s/AKfycbyLNQyTF0zPjFIW176T6oCvs2tOikWQ11VVXpzUquS4NDSpT2scqSB0EoKCkDJ-ekBi/exec";
 var STORAGE_KEY = "alamo_crew_passcode_dev";
 
 var COLORS = ["#E52329", "#F5B041", "#2A9D8F", "#457B9D", "#9B5DE5", "#00BBF9", "#E76F51"];
@@ -703,6 +759,9 @@ var authForm = document.getElementById("authForm");
 var authInput = document.getElementById("authInput");
 var authError = document.getElementById("authError");
 var lockBtn = document.getElementById("lockBtn");
+
+var champNameEl = document.getElementById("champName");
+var tagAlongNameEl = document.getElementById("tagAlongName");
 
 var HOME = "https://drafthouse.com";
 var THEATER_LINKS = {
@@ -1114,6 +1173,10 @@ function load() {
       allRawEvents = upcoming.concat(past);
       pioneerChampion = data.pioneerChampion || null;
       topTagAlong = data.topTagAlong || null;
+
+      // Update Standings UI
+      champNameEl.textContent = pioneerChampion ? pioneerChampion : "None yet";
+      tagAlongNameEl.textContent = topTagAlong ? topTagAlong : "None yet";
 
       upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
       past.sort(function(a, b) { return parseTs(b.showtime) - parseTs(a.showtime); });
