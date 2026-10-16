@@ -196,6 +196,12 @@ h1 span.brand { color: var(--red); }
   padding: 2px 10px;
   border-radius: 6px;
 }
+  .standings-desc {
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 2px;
+  line-height: 1.35;
+}
 
 h2 {
   font-family: 'Bebas Neue', Impact, sans-serif;
@@ -675,15 +681,23 @@ h3 {
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
     
-    <!-- 30-Day Crew Standings Leaderboard -->
+   <!-- 30-Day Crew Standings Leaderboard -->
     <div class="standings-card" id="standingsCard">
       <div class="standings-title">30-Day Crew Standings</div>
+      
       <div class="standings-row">
-        <span class="standings-label">👑 Top Pioneer</span>
+        <div>
+          <span class="standings-label">👑 Top Pioneer</span>
+          <div class="standings-desc">Calls the shots. Booked the most movies that got the crew to join.</div>
+        </div>
         <span class="standings-val" id="champName">—</span>
       </div>
+
       <div class="standings-row">
-        <span class="standings-label">🚂 Top Tag-Along</span>
+        <div>
+          <span class="standings-label">🚂 Top Tag-Along</span>
+          <div class="standings-desc">Never misses out. Joined the most screenings someone else locked in first.</div>
+        </div>
         <span class="standings-val" id="tagAlongName">—</span>
       </div>
     </div>
