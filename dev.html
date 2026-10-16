@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Who's Seeing What [DEV]</title>
+<title>Who's Seeing What</title>
 
 <!-- iOS & Android PWA Meta Tags -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -90,10 +90,20 @@ h1 {
 h1 span.brand { color: var(--red); }
 
 .lede {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.45;
+}
+
+.badge-legend {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .header-controls {
@@ -313,6 +323,13 @@ h3 {
   font-size: 13px;
   font-weight: 600;
   color: #E2E2E8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-tag {
+  font-size: 12px;
 }
 
 .seat-badge {
@@ -608,9 +625,7 @@ h3 {
 </style>
 </head>
 <body>
-<div style="background: #E67E22; color: #111; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 0;">
-  🛠 Dev / Staging Environment
-</div>
+
 <div id="ptr-banner">↓ Pull to refresh</div>
 
 <!-- One-Time Passcode Lock Screen -->
@@ -631,6 +646,11 @@ h3 {
   <header>
     <h1>Who's seeing <span class="brand">what</span></h1>
     <p class="lede">Your crew's Alamo Drafthouse schedule. Pick a screening you want in on and grab seats together.</p>
+    <div class="badge-legend">
+      <span>👑 30-Day Pioneer Champ</span>
+      <span>•</span>
+      <span>🚂 Top Tag-Along</span>
+    </div>
     <div class="header-controls">
       <div class="status-bar" id="statusBar" title="Tap to check for new tickets">
         <span class="status-dot" id="statusDot"></span>
@@ -683,8 +703,8 @@ h3 {
 </main>
 
 <script>
-var BASE_API_URL = "https://script.google.com/macros/s/AKfycbxnk8cCBlXy9YBeSZHrJkIhSqFPXAiesxNYOhQ18oM2rn1blqyzH82-GKaQJexBr9ub/exec";
-var STORAGE_KEY = "alamo_crew_passcode_dev";
+var BASE_API_URL = "https://script.google.com/macros/s/AKfycbyLNQyTF0zPjFIW176T6oCvs2tOikWQ11VVXpzUquS4NDSpT2scqSB0EoKCkDJ-ekBi/exec";
+var STORAGE_KEY = "alamo_crew_passcode_prod";
 
 var COLORS = ["#E52329", "#F5B041", "#2A9D8F", "#457B9D", "#9B5DE5", "#00BBF9", "#E76F51"];
 var feed = document.getElementById("feed");
@@ -720,8 +740,8 @@ var nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
 var isSyncingNow = false;
 var isPastExpanded = false;
 var allRawEvents = [];
-var pioneerStatsData = {};
-var totalsData = {};
+var pioneerChampion = null;
+var topTagAlong = null;
 var lastSyncIso = null;
 
 (function checkMagicLink() {
@@ -865,12 +885,6 @@ function openProfile(personName) {
     }
   });
 
-  // Pioneer vs Tag-Along calculations
-  var pioneerCount = pioneerStatsData[personName] || 0;
-  var totalSeen = totalsData[personName] || recentMovies;
-  var tagAlongCount = Math.max(0, totalSeen - pioneerCount);
-  var pioneerPct = totalSeen > 0 ? Math.round((pioneerCount / totalSeen) * 100) : 0;
-
   var profAv = document.getElementById("profAv");
   var profName = document.getElementById("profName");
   var profMovieCount = document.getElementById("profMovieCount");
@@ -881,11 +895,16 @@ function openProfile(personName) {
     profAv.style.background = colorFor(personName);
     profAv.textContent = personName.charAt(0).toUpperCase();
   }
-  if (profName) profName.textContent = personName;
+
+  var badgeHtml = personName;
+  if (personName === pioneerChampion) badgeHtml += ' <span title="30-Day Pioneer Champion">👑</span>';
+  if (personName === topTagAlong) badgeHtml += ' <span title="Top Tag-Along">🚂</span>';
+  if (profName) profName.innerHTML = badgeHtml;
+
   if (profMovieCount) profMovieCount.textContent = recentMovies;
   if (profTopTheater) profTopTheater.textContent = topTheater;
   if (profTopTheaterCount) {
-    profTopTheaterCount.textContent = pioneerCount + " Pioneer (" + pioneerPct + "%) / " + tagAlongCount + " Tag-Along";
+    profTopTheaterCount.textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
   }
 
   var modal = document.getElementById("profileModal");
@@ -960,7 +979,24 @@ function createTicketCard(s, isPast) {
 
     var nameLabel = document.createElement("span");
     nameLabel.className = "names";
-    nameLabel.textContent = n;
+    
+    var nameText = document.createTextNode(n);
+    nameLabel.appendChild(nameText);
+
+    if (n === pioneerChampion) {
+      var pBadge = document.createElement("span");
+      pBadge.className = "badge-tag";
+      pBadge.title = "30-Day Pioneer Champion";
+      pBadge.textContent = "👑";
+      nameLabel.appendChild(pBadge);
+    }
+    if (n === topTagAlong) {
+      var tBadge = document.createElement("span");
+      tBadge.className = "badge-tag";
+      tBadge.title = "Top Tag-Along";
+      tBadge.textContent = "🚂";
+      nameLabel.appendChild(tBadge);
+    }
 
     personInfo.appendChild(a);
     personInfo.appendChild(nameLabel);
@@ -1096,8 +1132,8 @@ function load() {
       lastSyncIso = data.lastSynced || null;
 
       allRawEvents = upcoming.concat(past);
-      pioneerStatsData = data.pioneerStats || {};
-      totalsData = data.totals || {};
+      pioneerChampion = data.pioneerChampion || null;
+      topTagAlong = data.topTagAlong || null;
 
       upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
       past.sort(function(a, b) { return parseTs(b.showtime) - parseTs(a.showtime); });
