@@ -781,7 +781,9 @@ var isSyncingNow = false;
 var isPastExpanded = false;
 var allRawEvents = [];
 var pioneerChampion = null;
+var pioneerCount = 0;
 var topTagAlong = null;
+var tagAlongCount = 0;
 var lastSyncIso = null;
 
 (function checkMagicLink() {
@@ -944,15 +946,15 @@ function openProfile(personName) {
     if (personName === pioneerChampion) {
       var pBadge = document.createElement("span");
       pBadge.style.fontSize = "22px";
-      pBadge.title = "30-Day Pioneer Champion";
-      pBadge.textContent = "👑";
+      pBadge.title = "30-Day Pioneer Champion (" + pioneerCount + ")";
+      pBadge.textContent = "👑 " + pioneerCount;
       profName.appendChild(pBadge);
     }
     if (personName === topTagAlong) {
       var tBadge = document.createElement("span");
       tBadge.style.fontSize = "22px";
-      tBadge.title = "Top Tag-Along";
-      tBadge.textContent = "🚂";
+      tBadge.title = "Top Tag-Along (" + tagAlongCount + ")";
+      tBadge.textContent = "🚂 " + tagAlongCount;
       profName.appendChild(tBadge);
     }
   }
@@ -1172,11 +1174,13 @@ function load() {
 
       allRawEvents = upcoming.concat(past);
       pioneerChampion = data.pioneerChampion || null;
+      pioneerCount = data.pioneerCount || 0;
       topTagAlong = data.topTagAlong || null;
+      tagAlongCount = data.tagAlongCount || 0;
 
-      // Update Standings UI
-      champNameEl.textContent = pioneerChampion ? pioneerChampion : "None yet";
-      tagAlongNameEl.textContent = topTagAlong ? topTagAlong : "None yet";
+      // Update Standings UI with names and counts
+      champNameEl.textContent = pioneerChampion ? (pioneerChampion + " (" + pioneerCount + ")") : "None yet";
+      tagAlongNameEl.textContent = topTagAlong ? (topTagAlong + " (" + tagAlongCount + ")") : "None yet";
 
       upcoming.sort(function(a, b) { return parseTs(a.showtime) - parseTs(b.showtime); });
       past.sort(function(a, b) { return parseTs(b.showtime) - parseTs(a.showtime); });
