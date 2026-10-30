@@ -658,6 +658,65 @@ h3 {
   text-align: center;
   color: var(--dim);
 }
+/* Reaction Bar & Buttons */
+.reaction-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.reaction-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 20px;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.reaction-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.reaction-btn.active {
+  background: rgba(245, 176, 65, 0.15);
+  border-color: rgba(245, 176, 65, 0.45);
+}
+
+.reaction-btn span:first-child {
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reaction-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.reaction-count:empty {
+  display: none;
+  margin-left: 0;
+}
+
+.reaction-btn.active .reaction-count {
+  color: var(--gold);
+}
 </style>
 </head>
 <body>
@@ -1097,6 +1156,41 @@ function createTicketCard(s, isPast) {
   el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + mm;
   el.querySelector(".ampm").textContent = hh >= 12 ? "PM" : "AM";
 
+  // Reaction Bar
+  var eventKey = s.id;
+  var reactions = s.reactions || { "❤️": 0, "😮": 0, "💩": 0 };
+  var userLocal = getLocalReactions()[eventKey] || {};
+
+  var bar = document.createElement("div");
+  bar.className = "reaction-bar";
+
+  EMOJIS.forEach(function(emo) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "reaction-btn" + (userLocal[emo] ? " active" : "");
+
+    var emoSpan = document.createElement("span");
+    emoSpan.textContent = emo;
+
+    var countSpan = document.createElement("span");
+    countSpan.className = "reaction-count";
+    var cnt = reactions[emo] || 0;
+    countSpan.textContent = cnt > 0 ? cnt : "";
+
+    btn.appendChild(emoSpan);
+    btn.appendChild(countSpan);
+
+    btn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      toggleReaction(eventKey, emo, btn, countSpan);
+    });
+
+    bar.appendChild(btn);
+  });
+
+  var targetContainer = el.querySelector(".main-content") || el.querySelector(".ticket-body") || el;
+  targetContainer.appendChild(bar);
+
   return el;
 }
 
@@ -1286,7 +1380,66 @@ setInterval(function() {
 
 document.addEventListener("visibilitychange", function () {
   if (!document.hidden && getSavedPasscode()) load();
-});
+  });
+  
+var EMOJIS = ["❤️", "😮", "💩"];
+
+function getDeviceId() {
+  var id = localStorage.getItem("alamo_device_id");
+  if (!id) {
+    id = "dev_" + Math.random().toString(36).slice(2, 11) + "_" + Date.now();
+    localStorage.setItem("alamo_device_id", id);
+  }
+  return id;
+}
+
+function getLocalReactions() {
+  try {
+    return JSON.parse(localStorage.getItem("alamo_user_reactions") || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveLocalReaction(eventKey, emoji, isAdded) {
+  var local = getLocalReactions();
+  if (!local[eventKey]) local[eventKey] = {};
+  if (isAdded) {
+    local[eventKey][emoji] = true;
+  } else {
+    delete local[eventKey][emoji];
+  }
+  localStorage.setItem("alamo_user_reactions", JSON.stringify(local));
+}
+
+function toggleReaction(eventKey, emoji, btnElem, countElem) {
+  var local = getLocalReactions();
+  var isActive = Boolean(local[eventKey] && local[eventKey][emoji]);
+  var currentCount = parseInt(countElem.textContent, 10) || 0;
+
+  // Optimistic UI update
+  var newCount = isActive ? Math.max(0, currentCount - 1) : currentCount + 1;
+  countElem.textContent = newCount > 0 ? newCount : "";
+  btnElem.classList.toggle("active", !isActive);
+  saveLocalReaction(eventKey, emoji, !isActive);
+
+  var payload = {
+    key: typeof getSavedPasscode === "function" ? getSavedPasscode() : (localStorage.getItem(STORAGE_KEY) || ""),
+    eventKey: eventKey,
+    emoji: emoji,
+    deviceId: getDeviceId()
+  };
+
+  fetch(BASE_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  })
+  .then(function(res) { return res.json(); })
+  .catch(function(err) {
+    console.error("Failed to sync reaction:", err);
+  });
+}
 </script>
 </body>
 </html>
