@@ -671,14 +671,13 @@ h3 {
 
 .reaction-btn {
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent; /* No outline by default */
+  border: 1px solid transparent;
   border-radius: 20px;
   padding: 6px 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   user-select: none;
   transition: all 0.15s ease;
   line-height: 1;
@@ -690,23 +689,33 @@ h3 {
 
 .reaction-btn.active {
   background: rgba(245, 176, 65, 0.15);
-  border-color: rgba(245, 176, 65, 0.45); /* Subtle gold ring only when active */
+  border-color: rgba(245, 176, 65, 0.45);
 }
 
-/* 20% larger emoji, vertically centered with text baseline */
+/* Emoji glyph container */
 .reaction-btn span:first-child {
-  font-size: 16px; /* up from ~13px */
+  font-size: 16px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
+/* Count container */
 .reaction-count {
   font-size: 12px;
   font-weight: 700;
   color: var(--muted);
   line-height: 1;
+  margin-left: 6px; /* Replaces flex gap so no gap exists when empty */
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Hide completely when text is blank or 0 so the emoji centers perfectly */
+.reaction-count:empty {
+  display: none;
+  margin-left: 0;
 }
 
 .reaction-btn.active .reaction-count {
