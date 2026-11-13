@@ -201,7 +201,7 @@ h1 span.brand { color: var(--red); }
   flex-shrink: 0;
   margin-left: 12px;
 }
-  .standings-desc {
+.standings-desc {
   font-size: 11px;
   color: var(--dim);
   margin-top: 2px;
@@ -573,6 +573,44 @@ h3 {
   margin-top: 4px;
 }
 
+/* Letterboxd Profile Button */
+.lb-link {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #202830;
+  border: 1px solid #303C47;
+  border-radius: 10px;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.lb-link:hover {
+  background: #28333D;
+  border-color: #455666;
+}
+.lb-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.lb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.lb-dot.orange { background: #FF8000; }
+.lb-dot.green { background: #00E054; }
+.lb-dot.blue { background: #40BCF4; }
+
 /* Auth / Passcode Lock Screen */
 .auth-overlay {
   position: fixed;
@@ -707,12 +745,11 @@ h3 {
   font-weight: 700;
   color: var(--muted);
   line-height: 1;
-  margin-left: 6px; /* Replaces flex gap so no gap exists when empty */
+  margin-left: 6px;
   display: inline-flex;
   align-items: center;
 }
 
-/* Hide completely when text is blank or 0 so the emoji centers perfectly */
 .reaction-count:empty {
   display: none;
   margin-left: 0;
@@ -815,6 +852,15 @@ h3 {
           <div class="stat-sub" id="profTopTheaterCount">0 visits</div>
         </div>
       </div>
+
+      <a class="lb-link" id="profLetterboxd" href="#" target="_blank" rel="noopener noreferrer">
+        <span class="lb-dots" aria-hidden="true">
+          <span class="lb-dot orange"></span>
+          <span class="lb-dot green"></span>
+          <span class="lb-dot blue"></span>
+        </span>
+        <span id="profLetterboxdLabel">View on Letterboxd ↗</span>
+      </a>
     </div>
   </div>
 
@@ -824,6 +870,7 @@ h3 {
 <script>
 var BASE_API_URL = "https://script.google.com/macros/s/AKfycbxnk8cCBlXy9YBeSZHrJkIhSqFPXAiesxNYOhQ18oM2rn1blqyzH82-GKaQJexBr9ub/exec";
 var STORAGE_KEY = "alamo_crew_passcode_dev";
+var EMOJIS = ["❤️", "😮", "💩"];
 
 var COLORS = ["#E52329", "#F5B041", "#2A9D8F", "#457B9D", "#9B5DE5", "#00BBF9", "#E76F51"];
 var feed = document.getElementById("feed");
@@ -862,6 +909,7 @@ var nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
 var isSyncingNow = false;
 var isPastExpanded = false;
 var allRawEvents = [];
+var letterboxdMap = {};
 var pioneerChampion = null;
 var pioneerCount = 0;
 var topTagAlong = null;
@@ -1014,6 +1062,8 @@ function openProfile(personName) {
   var profMovieCount = document.getElementById("profMovieCount");
   var profTopTheater = document.getElementById("profTopTheater");
   var profTopTheaterCount = document.getElementById("profTopTheaterCount");
+  var profLetterboxd = document.getElementById("profLetterboxd");
+  var profLetterboxdLabel = document.getElementById("profLetterboxdLabel");
 
   if (profAv) {
     profAv.style.background = colorFor(personName);
@@ -1045,6 +1095,20 @@ function openProfile(personName) {
   if (profTopTheater) profTopTheater.textContent = topTheater;
   if (profTopTheaterCount) {
     profTopTheaterCount.textContent = maxVisits > 0 ? (maxVisits + (maxVisits === 1 ? " visit" : " visits")) : "No screenings";
+  }
+
+  if (profLetterboxd) {
+    var lbUrl = letterboxdMap[personName] || "";
+    if (lbUrl) {
+      profLetterboxd.href = lbUrl;
+      if (profLetterboxdLabel) {
+        profLetterboxdLabel.textContent = "View " + personName + " on Letterboxd ↗";
+      }
+      profLetterboxd.style.display = "flex";
+    } else {
+      profLetterboxd.style.display = "none";
+      profLetterboxd.href = "#";
+    }
   }
 
   var modal = document.getElementById("profileModal");
@@ -1163,7 +1227,7 @@ function createTicketCard(s, isPast) {
   el.querySelector(".time").textContent = (hh % 12 || 12) + ":" + mm;
   el.querySelector(".ampm").textContent = hh >= 12 ? "PM" : "AM";
 
-// Reaction Bar
+  // Reaction Bar
   var eventKey = s.id;
   var reactions = s.reactions || { "❤️": 0, "😮": 0, "💩": 0 };
   var userLocal = getLocalReactions()[eventKey] || {};
@@ -1287,6 +1351,7 @@ function load() {
       var upcoming = Array.isArray(data) ? data : (data.upcoming || []);
       var past = Array.isArray(data) ? [] : (data.past || []);
       lastSyncIso = data.lastSynced || null;
+      letterboxdMap = data.letterboxdMap || {};
 
       allRawEvents = upcoming.concat(past);
       pioneerChampion = data.pioneerChampion || null;
@@ -1388,8 +1453,6 @@ document.addEventListener("visibilitychange", function () {
   if (!document.hidden && getSavedPasscode()) load();
 });
 
-var EMOJIS = ["❤️", "😮", "💩"];
-
 function getDeviceId() {
   var id = localStorage.getItem("alamo_device_id");
   if (!id) {
@@ -1444,7 +1507,7 @@ function toggleReaction(eventKey, emoji, btnElem, countElem) {
   .then(function(res) { return res.json(); })
   .catch(function(err) {
     console.error("Failed to sync reaction:", err);
-});
+  });
 }
 </script>
 </body>
